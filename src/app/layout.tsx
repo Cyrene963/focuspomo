@@ -3,8 +3,8 @@ import "./globals.css";
 import { TabBar } from "@/components/TabBar";
 
 export const metadata: Metadata = {
-  title: "FocusPomo - Focus Timer",
-  description: "An open-source Pomodoro timer PWA. Focus smarter, not harder.",
+  title: "FocusPomo",
+  description: "An open-source Pomodoro timer PWA",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -30,9 +30,10 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-screen bg-cream-100 text-brown-800">
-        <main className="pb-20">{children}</main>
+      <body style={{ background: "#FDF6EC", color: "#3A2A1C", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
+        <main className="pb-[72px]">{children}</main>
         <TabBar />
       </body>
     </html>

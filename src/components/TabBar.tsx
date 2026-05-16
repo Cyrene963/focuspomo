@@ -15,22 +15,30 @@ export function TabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="tab-bar fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-cream-300 z-50">
-      <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        background: "rgba(253,246,236,0.92)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderTop: "0.5px solid rgba(58,42,28,0.08)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <div className="flex justify-around items-center h-[56px] max-w-lg mx-auto">
         {tabs.map((tab) => {
           const isActive = pathname === tab.href;
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 ${
-                isActive
-                  ? "text-coral-500 scale-110"
-                  : "text-brown-700/50 hover:text-brown-700"
-              }`}
+              className="flex flex-col items-center gap-[2px] px-4 py-1 transition-all duration-150"
+              style={{
+                color: isActive ? "#F06858" : "rgba(58,42,28,0.35)",
+              }}
             >
-              <span className="text-xl">{tab.icon}</span>
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span className="text-[20px] leading-none">{tab.icon}</span>
+              <span className="text-[10px] font-medium leading-none">{tab.label}</span>
             </Link>
           );
         })}
