@@ -1,26 +1,77 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --cream-bg: #FDF6EC;
+  --cream-card: #F5EDE3;
+  --coral: #F06858;
+  --coral-light: #F28076;
+  --brown-dark: #4A3728;
+  --brown-medium: #5A4538;
+  --green-tomato: #4CAF50;
+  --yellow-unripe: #FFD93D;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--cream-bg);
+  color: var(--brown-dark);
+  font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 55, 40, 0.2);
+  border-radius: 2px;
+}
+
+/* Timer font */
+.timer-display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Glass effect for tags */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Tomato SVG animations */
+.tomato-svg {
+  filter: drop-shadow(0 4px 12px rgba(240, 104, 88, 0.3));
+}
+
+/* Hold to stop ring animation */
+@keyframes holdRing {
+  0% { stroke-dashoffset: 283; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.hold-ring {
+  animation: holdRing 3s linear forwards;
+}
+
+/* Gradient backgrounds */
+.gradient-focus {
+  background: linear-gradient(180deg, #F06858 0%, #FDF6EC 100%);
+}
+
+.gradient-timer-active {
+  background: radial-gradient(ellipse at center, #F06858 0%, #FDF6EC 70%);
+}
+
+/* Bottom tab bar safe area */
+.tab-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
