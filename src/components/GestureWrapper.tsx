@@ -48,7 +48,7 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: enterX, y: enterY }}
+      initial={false}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: -enterX, y: -enterY }}
       transition={spring}
