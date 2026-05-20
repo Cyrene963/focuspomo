@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
 
-const TS = "1779317800";
+const TS = "1779318471";
 
 export const metadata: Metadata = {
   title: "FocusPomo",
