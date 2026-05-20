@@ -1,15 +1,15 @@
-const CACHE_NAME = 'focuspomo-v4';
+const CACHE_NAME = 'focuspomo-v5';
 
 // Keep this in sync with public/manifest.json and src/app/layout.tsx.
 // Only cache install-critical static assets, NOT HTML pages.
 const STATIC_ASSETS = [
   '/manifest.json',
-  '/favicon-1779296934.ico',
-  '/favicon-1779296934-32.png',
-  '/favicon-1779296934-16.png',
-  '/icon-1779296934-192.png',
-  '/icon-1779296934-512.png',
-  '/icon-1779296934-apple.png',
+  '/favicon-1779317800.ico',
+  '/favicon-1779317800-32.png',
+  '/favicon-1779317800-16.png',
+  '/icon-1779317800-192.png',
+  '/icon-1779317800-512.png',
+  '/icon-1779317800-apple.png',
   '/favicon.ico',
   '/apple-touch-icon.png',
 ];
