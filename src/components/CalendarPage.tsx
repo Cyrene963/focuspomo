@@ -107,13 +107,14 @@ export default function CalendarPage() {
                           position: "absolute",
                           top: topPx + 1, left: 4, right: 4,
                           height: hPx - 2,
-                          background: r.tagColor + "CC", // semi-transparent capsule
-                          borderRadius: 12,
-                          padding: "6px 8px",
+                          background: `linear-gradient(135deg, ${r.tagColor}E6, ${r.tagColor}AA)`,
+                          borderRadius: 16,
+                          padding: "8px 10px",
                           display: "flex", flexDirection: "column", justifyContent: "space-between",
                           overflow: "hidden",
-                          backdropFilter: "blur(4px)",
-                          boxShadow: `0 2px 12px ${r.tagColor}33, inset 0 1px 0 rgba(255,255,255,0.2)`,
+                          backdropFilter: "blur(8px)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          boxShadow: `0 4px 16px ${r.tagColor}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
                           zIndex: 2,
                         }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: "#FFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.tagName}</span>

@@ -15,11 +15,13 @@
   --tomato-yellow: #FFD60A;
   --separator: rgba(0, 0, 0, 0.06);
   --shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --gradient-idle: radial-gradient(circle at 50% 30%, rgba(255,235,215,0.6) 0%, rgba(255,248,240,1) 70%), linear-gradient(180deg, rgba(255,220,190,0.4) 0%, rgba(255,248,240,1) 100%);
+  --gradient-run: radial-gradient(circle at 50% 30%, rgba(255,200,160,0.7) 0%, rgba(253,232,216,0.8) 40%, rgba(255,248,240,1) 70%);
   --font: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 }
 
 html.dark {
-  --bg: #000000;
+  --bg: #0A0A0A;
   --bg-card: #1C1C1E;
   --bg-glass: rgba(28, 28, 30, 0.78);
   --bg-overlay: rgba(0, 0, 0, 0.65);
@@ -30,6 +32,8 @@ html.dark {
   --accent-mid: #2C2C2E;
   --separator: rgba(255, 255, 255, 0.08);
   --shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+  --gradient-idle: radial-gradient(circle at 50% 30%, rgba(45,25,10,0.5) 0%, rgba(10,10,10,1) 80%);
+  --gradient-run: radial-gradient(circle at 50% 40%, rgba(60,30,12,0.6) 0%, rgba(10,10,10,1) 75%);
 }
 
 /* ===== RESET ===== */

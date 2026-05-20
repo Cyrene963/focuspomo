@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useStore, type Page } from "@/lib/store";
 import GestureWrapper from "@/components/GestureWrapper";
@@ -15,6 +15,19 @@ export default function AppShell() {
   const { page, setPage } = useStore();
 
   const go = useCallback((p: Page) => setPage(p), [setPage]);
+
+  // Keyboard shortcuts (desktop only)
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); go("summary"); }
+      if (e.key === "ArrowUp") { e.preventDefault(); go("timer"); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go("stats"); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go("settings"); }
+      if (e.key === "Escape") { e.preventDefault(); go("timer"); }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [go]);
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--bg)", overflow: "hidden", transition: "background 0.4s" }}>

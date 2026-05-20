@@ -95,7 +95,7 @@ export default function StatsPage() {
                 <div style={{
                   width: "100%", maxWidth: 36,
                   height: `${Math.max((bar.mins / maxBar) * 100, 6)}px`,
-                  background: bar.color, borderRadius: "10px 10px 4px 4px",
+                  background: bar.color, borderRadius: 999,
                   transition: "height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                   boxShadow: `0 4px 12px ${bar.color}33`,
                 }} />

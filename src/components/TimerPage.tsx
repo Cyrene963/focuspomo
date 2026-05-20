@@ -98,10 +98,10 @@ export default function TimerPage() {
 
   useEffect(() => () => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); }, []);
 
-  // Single gradient — covers ENTIRE screen, no split
+  // Atmospheric fluid gradient
   const bgColor = isActive
-    ? "var(--accent-mid)"
-    : "var(--accent-light)";
+    ? "var(--gradient-run)"
+    : "var(--gradient-idle)";
 
   return (
     <div style={{
@@ -177,7 +177,12 @@ export default function TimerPage() {
               <motion.button
                 onClick={(e) => { e.stopPropagation(); setShowTags(true); }}
                 className="pressable"
-                style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 20 }}
+                style={{
+                  marginTop: 20, display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 20px", borderRadius: 999,
+                  background: "rgba(0,0,0,0.04)",
+                  transition: "all 0.2s",
+                }}
               >
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: selectedTag.color }} />
                 <span style={{ fontSize: "clamp(15px, 3vw, 20px)", fontWeight: 600, color: "var(--text)" }}>{selectedTag.name}</span>
@@ -207,11 +212,12 @@ export default function TimerPage() {
                   width: "clamp(200px, 55vw, 260px)",
                   height: "clamp(52px, 9vh, 62px)",
                   borderRadius: 999,
-                  background: "var(--text)",
-                  color: "var(--bg)",
+                  background: "#2D2625",
+                  color: "#FFFFFF",
                   fontSize: "clamp(16px, 3vw, 20px)",
-                  fontWeight: 700,
-                  boxShadow: "0 6px 24px rgba(0,0,0,0.18)",
+                  fontWeight: 600,
+                  letterSpacing: "-0.01em",
+                  boxShadow: "0 10px 25px -5px rgba(45,38,37,0.3), 0 4px 10px -2px rgba(0,0,0,0.1)",
                 }}
               >
                 Start {selectedTag.name}
