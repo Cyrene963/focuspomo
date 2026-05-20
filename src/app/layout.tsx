@@ -2,20 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
 
-const TS = "1779279663";
+const TS = "1779296934";
 
 export const metadata: Metadata = {
   title: "FocusPomo",
   description: "An open-source Pomodoro timer PWA",
   manifest: "/manifest.json",
-  icons: {
-    icon: [
-      { url: `/favicon-${TS}.ico`, type: "image/x-icon" },
-      { url: `/favicon-${TS}-32.png`, type: "image/png", sizes: "32x32" },
-      { url: `/favicon-${TS}-16.png`, type: "image/png", sizes: "16x16" },
-    ],
-    apple: { url: `/favicon-${TS}-apple.png`, sizes: "180x180" },
-  },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FocusPomo" },
   other: { "mobile-web-app-capable": "yes" },
 };
@@ -36,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href={`/favicon-${TS}.ico`} type="image/x-icon" />
         <link rel="icon" href={`/favicon-${TS}-32.png`} type="image/png" sizes="32x32" />
         <link rel="icon" href={`/favicon-${TS}-16.png`} type="image/png" sizes="16x16" />
-        <link rel="apple-touch-icon" href={`/favicon-${TS}-apple.png`} sizes="180x180" />
+        <link rel="apple-touch-icon" href={`/icon-${TS}-apple.png`} sizes="180x180" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
