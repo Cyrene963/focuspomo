@@ -1,77 +1,102 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* ===== THEME VARIABLES — Apple Spec ===== */
 :root {
-  --cream-bg: #FDF6EC;
-  --cream-card: #F5EDE3;
-  --coral: #F06858;
-  --coral-light: #F28076;
-  --brown-dark: #4A3728;
-  --brown-medium: #5A4538;
-  --green-tomato: #4CAF50;
-  --yellow-unripe: #FFD93D;
+  --bg: #FFF8F0;
+  --bg-card: #FFFFFF;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --text: #1D1D1F;
+  --text-sec: #86868B;
+  --accent: #E8644E;
+  --accent-light: #FDE8D8;
+  --accent-mid: #FCC89E;
+  --leaf: #34C759;
+  --tomato-yellow: #FFD60A;
+  --separator: rgba(0, 0, 0, 0.06);
+  --shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --font: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 }
 
-body {
-  background-color: var(--cream-bg);
-  color: var(--brown-dark);
-  font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+html.dark {
+  --bg: #000000;
+  --bg-card: #1C1C1E;
+  --bg-glass: rgba(28, 28, 30, 0.78);
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+  --text: #FFFFFF;
+  --text-sec: #98989D;
+  --accent: #FF6B4A;
+  --accent-light: #1C1C1E;
+  --accent-mid: #2C2C2E;
+  --separator: rgba(255, 255, 255, 0.08);
+  --shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #__next {
+  height: 100dvh; height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   overscroll-behavior: none;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.4s ease, color 0.4s ease;
 }
+::-webkit-scrollbar { display: none; }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(74, 55, 40, 0.2);
-  border-radius: 2px;
-}
-
-/* Timer font */
-.timer-display {
+/* ===== TYPOGRAPHY ===== */
+.timer-number {
+  font-family: var(--font);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text);
 }
 
-/* Glass effect for tags */
+/* ===== SPRING CURVES ===== */
+.spring-in { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.spring-out { transition: all 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045); }
+
+/* ===== BUTTON PRESS ===== */
+button { -webkit-tap-highlight-color: transparent; cursor: pointer; border: none; background: none; font-family: var(--font); }
+.pressable {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  will-change: transform;
+}
+.pressable:active {
+  transform: scale(0.94) !important;
+  opacity: 0.8;
+}
+
+/* ===== GLASSMORPHISM ===== */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
 }
 
-/* Tomato SVG animations */
-.tomato-svg {
-  filter: drop-shadow(0 4px 12px rgba(240, 104, 88, 0.3));
+/* ===== COMPLETION FLASH ===== */
+@keyframes flash {
+  0%, 100% { opacity: 0; }
+  15% { opacity: 0.8; }
+  30% { opacity: 0; }
+  50% { opacity: 0.5; }
+  70% { opacity: 0; }
+}
+.completion-flash {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  pointer-events: none; z-index: 999;
+  animation: flash 0.8s ease-out forwards;
 }
 
-/* Hold to stop ring animation */
-@keyframes holdRing {
-  0% { stroke-dashoffset: 283; }
-  100% { stroke-dashoffset: 0; }
-}
-
-.hold-ring {
-  animation: holdRing 3s linear forwards;
-}
-
-/* Gradient backgrounds */
-.gradient-focus {
-  background: linear-gradient(180deg, #F06858 0%, #FDF6EC 100%);
-}
-
-.gradient-timer-active {
-  background: radial-gradient(ellipse at center, #F06858 0%, #FDF6EC 70%);
-}
-
-/* Bottom tab bar safe area */
-.tab-bar {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
+/* ===== SAFE AREAS ===== */
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
