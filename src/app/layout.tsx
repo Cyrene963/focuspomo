@@ -43,6 +43,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ThemeProvider>
         <script dangerouslySetInnerHTML={{ __html: `
           if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}
+          // Force Safari to re-evaluate favicon links after page load
+          (function(){
+            function fix(){
+              [
+                ['/favicon-${TS}.ico','image/x-icon',null],
+                ['/favicon-${TS}-32.png','image/png','32x32'],
+                ['/favicon-${TS}-16.png','image/png','16x16'],
+                ['/icon-${TS}-apple.png',null,'180x180']
+              ].forEach(function(p){
+                var l=document.createElement('link');
+                l.rel=p[2]?'apple-touch-icon':'icon';
+                l.href=p[0]+'?v='+Date.now();
+                if(p[1])l.type=p[1];
+                if(p[2])l.sizes=p[2];
+                document.head.appendChild(l);
+              });
+            }
+            if(document.readyState==='complete')fix();else window.addEventListener('load',fix);
+          })();
         `}} />
       </body>
     </html>
