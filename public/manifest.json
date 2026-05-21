@@ -4,9 +4,9 @@
   "description": "An open-source Pomodoro timer PWA",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFF8F0",
-  "theme_color": "#FFF8F0",
-  "orientation": "any",
+  "background_color": "#F5F0EB",
+  "theme_color": "#F5F0EB",
+  "orientation": "portrait",
   "scope": "/",
   "lang": "en",
   "categories": [
@@ -14,19 +14,19 @@
   ],
   "icons": [
     {
-      "src": "/icon-1779318471-192.png",
+      "src": "/icon-1779372627-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-1779318471-512.png",
+      "src": "/icon-1779372627-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-1779318471-apple.png",
+      "src": "/icon-1779372627-apple.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
