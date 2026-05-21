@@ -38,6 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href={`/favicon-${TS}-16.png`} type="image/png" sizes="16x16" />
         <link rel="apple-touch-icon" href={`/icon-${TS}-apple.png`} sizes="180x180" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        <link rel="mask-icon" href={`/safari-pinned-tab-${TS}.svg`} color="#E8644E" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#E8644E" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#F5F0EB" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

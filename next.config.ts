@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
       { source: "/sw.js", headers: noStoreHeaders },
       { source: "/:path((?:favicon|icon)-.*\\.(?:ico|png))", headers: noStoreHeaders },
       { source: "/icons/:path*", headers: noStoreHeaders },
+      { source: "/safari-pinned-tab.svg", headers: noStoreHeaders },
+      { source: "/safari-pinned-tab-1779372627.svg", headers: noStoreHeaders },
+      { source: "/mask-icon.svg", headers: noStoreHeaders },
     ];
   },
 };

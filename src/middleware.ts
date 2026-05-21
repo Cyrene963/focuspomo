@@ -9,6 +9,8 @@ const NO_STORE_PATHS = [
   /^\/favicon-\d+(?:-\d+)?\.(?:ico|png)$/,
   /^\/icon-\d+-(?:192|512|apple)\.png$/,
   /^\/icons\/icon-(?:192|512)\.png$/,
+  /^\/safari-pinned-tab(?:-\d+)?\.svg$/,
+  /^\/mask-icon\.svg$/,
 ];
 
 export function middleware(request: NextRequest) {
@@ -33,5 +35,8 @@ export const config = {
     "/favicon-:path*",
     "/icon-:path*",
     "/icons/:path*",
+    "/safari-pinned-tab.svg",
+    "/safari-pinned-tab-1779372627.svg",
+    "/mask-icon.svg",
   ],
 };
