@@ -4,7 +4,24 @@ import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 7am - 11pm
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const ROW_H = 56;
+
+type CalendarRecord = ReturnType<typeof useStore.getState>["history"][number];
+type LaneRecord = CalendarRecord & { lane: number; laneCount: number };
+
+function layoutLanes(records: CalendarRecord[]): LaneRecord[] {
+  const sorted = [...records].sort((a, b) => a.startTime - b.startTime);
+  const laneEnds: number[] = [];
+  return sorted.map((r) => {
+    const start = r.startTime;
+    const end = r.startTime + Math.max(r.actualDuration, 60) * 1000;
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = end;
+    return { ...r, lane, laneCount: laneEnds.length };
+  }).map((r) => ({ ...r, laneCount: laneEnds.length }));
+}
 
 function startOfWeek(d: Date) { const r = new Date(d); r.setDate(r.getDate() - r.getDay()); r.setHours(0,0,0,0); return r; }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
@@ -27,20 +44,27 @@ export default function CalendarPage() {
     return `${s.getMonth() + 1}月${s.getDate()}日 – ${e.getMonth() + 1}月${e.getDate()}日`;
   };
 
-  const ROW_H = 64;
+  const ROW_HEIGHT = ROW_H;
+  const jumpToday = () => setWeekStart(startOfWeek(new Date()));
 
   return (
     <div style={{ height: "100%", width: "100%", background: "var(--bg)", display: "flex", flexDirection: "column", transition: "background 0.4s" }}>
       {/* Header */}
       <div style={{ padding: "52px 20px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setWeekStart(addDays(weekStart, -7))} className="pressable" style={{ padding: 8 }}>
+          <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="上一周" className="pressable" style={{ padding: 8, minWidth: 44, minHeight: 44 }}>
             <svg width="16" height="16" viewBox="0 0 8 12" fill="none" stroke="var(--text-sec)" strokeWidth="2" strokeLinecap="round"><path d="M6 1L1 6l5 5" /></svg>
           </button>
           <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", minWidth: 160, textAlign: "center" }}>{weekLabel()}</span>
-          <button onClick={() => setWeekStart(addDays(weekStart, 7))} className="pressable" style={{ padding: 8 }}>
+          <button onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="下一周" className="pressable" style={{ padding: 8, minWidth: 44, minHeight: 44 }}>
             <svg width="16" height="16" viewBox="0 0 8 12" fill="none" stroke="var(--text-sec)" strokeWidth="2" strokeLinecap="round"><path d="M1 1l5 5-5 5" /></svg>
           </button>
+          {!sameDay(weekStart, startOfWeek(today)) && (
+            <button onClick={jumpToday} className="pressable" style={{
+              marginLeft: 4, padding: "8px 12px", borderRadius: 14,
+              background: "var(--separator)", color: "var(--text)", fontSize: 12, fontWeight: 700,
+            }}>今天</button>
+          )}
         </div>
       </div>
 
@@ -83,7 +107,7 @@ export default function CalendarPage() {
           {HOURS.map(hour => (
             <div key={hour} style={{ display: "contents" }}>
               <div style={{
-                height: ROW_H, display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
+                height: ROW_HEIGHT, display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
                 paddingTop: 2, paddingRight: 10,
               }}>
                 <span style={{ fontSize: 10, color: "var(--text-sec)", fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>
@@ -91,25 +115,28 @@ export default function CalendarPage() {
                 </span>
               </div>
               {days.map((day, di) => {
-                const slotRecords = allRecords.filter(r => {
+                const slotRecords = layoutLanes(allRecords.filter(r => {
                   const d = new Date(r.startTime);
                   return sameDay(d, day) && d.getHours() === hour;
-                });
+                }));
                 return (
                   <div key={di} style={{
-                    height: ROW_H,
+                    height: ROW_HEIGHT,
                     position: "relative",
                     padding: "1px 3px",
                   }}>
                     {slotRecords.map(r => {
                       const startMin = new Date(r.startTime).getMinutes();
                       const durMin = Math.round(r.actualDuration / 60);
-                      const topPx = (startMin / 60) * ROW_H;
-                      const hPx = Math.max((durMin / 60) * ROW_H, 28);
+                      const topPx = (startMin / 60) * ROW_HEIGHT;
+                      const hPx = Math.max((durMin / 60) * ROW_HEIGHT, 28);
+                      const laneWidth = 100 / Math.max(r.laneCount, 1);
                       return (
-                        <div key={r.id} style={{
+                        <div key={r.id} aria-label={`${r.tagName} ${durMin}分钟`} title={`${r.tagName} · ${durMin}分钟`} style={{
                           position: "absolute",
-                          top: topPx + 1, left: 4, right: 4,
+                          top: topPx + 1,
+                          left: `calc(${r.lane * laneWidth}% + 4px)`,
+                          width: `calc(${laneWidth}% - 8px)`,
                           height: hPx - 2,
                           background: `linear-gradient(135deg, ${r.tagColor}E6, ${r.tagColor}AA)`,
                           borderRadius: 16,

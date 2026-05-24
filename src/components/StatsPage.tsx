@@ -3,9 +3,47 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 
-const BAR_COLORS = ["#FFD60A", "#FFD60A", "#34C759", "#34C759", "#5AC8FA", "#FF6B4A", "#FF6B4A"];
 const PERIODS = ["week", "month", "year"] as const;
 const PERIOD_LABELS = { week: "本周", month: "本月", year: "今年" } as const;
+
+type BarBucket = { label: string; mins: number; color: string; aria: string };
+
+function startOfWeek(d: Date) {
+  const r = new Date(d);
+  r.setDate(r.getDate() - r.getDay());
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+function bucketRecords(records: ReturnType<typeof useStore.getState>["history"], period: typeof PERIODS[number]): BarBucket[] {
+  const now = new Date();
+  if (period === "week") {
+    const labels = ["一", "二", "三", "四", "五", "六", "日"];
+    return labels.map((label, i) => {
+      const dayIdx = (i + 1) % 7;
+      const mins = Math.round(records.filter(r => new Date(r.startTime).getDay() === dayIdx).reduce((s, r) => s + r.actualDuration, 0) / 60);
+      return { label, mins, color: "var(--accent)", aria: `星期${label} ${mins}分钟` };
+    });
+  }
+  if (period === "month") {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const bucketSize = Math.ceil(daysInMonth / 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const start = i * bucketSize + 1;
+      const end = Math.min(daysInMonth, start + bucketSize - 1);
+      const mins = Math.round(records.filter(r => {
+        const d = new Date(r.startTime).getDate();
+        return d >= start && d <= end;
+      }).reduce((s, r) => s + r.actualDuration, 0) / 60);
+      const label = `${start}-${end}`;
+      return { label, mins, color: "var(--accent)", aria: `${label}日 ${mins}分钟` };
+    });
+  }
+  return Array.from({ length: 12 }, (_, i) => {
+    const mins = Math.round(records.filter(r => new Date(r.startTime).getMonth() === i).reduce((s, r) => s + r.actualDuration, 0) / 60);
+    return { label: `${i + 1}月`, mins, color: "var(--accent)", aria: `${i + 1}月 ${mins}分钟` };
+  });
+}
 
 export default function StatsPage() {
   const { history } = useStore();
@@ -25,15 +63,8 @@ export default function StatsPage() {
   const completed = filtered.filter(r => r.completed).length;
   const abandoned = filtered.filter(r => !r.completed).length;
 
-  const weekBars = useMemo(() => {
-    const labels = ["一", "二", "三", "四", "五", "六", "日"];
-    return labels.map((label, i) => {
-      const dayIdx = (i + 1) % 7;
-      const mins = Math.round(filtered.filter(r => new Date(r.startTime).getDay() === dayIdx).reduce((s, r) => s + r.actualDuration, 0) / 60);
-      return { label, mins, color: BAR_COLORS[i] };
-    });
-  }, [filtered]);
-  const maxBar = Math.max(...weekBars.map(b => b.mins), 60);
+  const barBuckets = useMemo(() => bucketRecords(filtered, period), [filtered, period]);
+  const maxBar = Math.max(...barBuckets.map(b => b.mins), 60);
 
   const tagStats = useMemo(() => {
     const m = new Map<string, { name: string; color: string; mins: number }>();
@@ -91,16 +122,16 @@ export default function StatsPage() {
           <div style={{ fontSize: 12, color: "var(--text-sec)", marginBottom: 28 }}>{PERIOD_LABELS[period]}</div>
           {/* Bar chart */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
-            {weekBars.map((bar, i) => (
-              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            {barBuckets.map((bar, i) => (
+              <div key={`${period}-${bar.label}`} aria-label={bar.aria} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <div style={{
-                  width: "100%", maxWidth: 36,
+                  width: "100%", maxWidth: period === "year" ? 22 : 36,
                   height: `${Math.max((bar.mins / maxBar) * 100, 6)}px`,
                   background: bar.color, borderRadius: 999,
                   transition: "height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                  boxShadow: `0 4px 12px ${bar.color}33`,
+                  boxShadow: "0 4px 12px rgba(232,100,78,0.2)",
                 }} />
-                <span style={{ fontSize: 10, color: "var(--text-sec)", fontWeight: 600 }}>{bar.label}</span>
+                <span style={{ fontSize: period === "year" ? 9 : 10, color: "var(--text-sec)", fontWeight: 600, writingMode: period === "year" ? "vertical-rl" : "horizontal-tb" }}>{bar.label}</span>
               </div>
             ))}
           </div>
