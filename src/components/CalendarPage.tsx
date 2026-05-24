@@ -3,19 +3,12 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 7am - 11pm
 
 function startOfWeek(d: Date) { const r = new Date(d); r.setDate(r.getDate() - r.getDay()); r.setHours(0,0,0,0); return r; }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function sameDay(a: Date, b: Date) { return a.toDateString() === b.toDateString(); }
-
-// Demo records
-const DEMO = [
-  { id: "d1", tagName: "Focus", tagColor: "#E07A45", startTime: new Date().setHours(9,0), endTime: new Date().setHours(9,25), actualDuration: 1500, completed: true, tagId: "f" },
-  { id: "d2", tagName: "Work", tagColor: "#55A67A", startTime: new Date().setHours(11,0), endTime: new Date().setHours(12,0), actualDuration: 3600, completed: true, tagId: "w" },
-  { id: "d3", tagName: "Study", tagColor: "#3ABFBF", startTime: new Date().setHours(14,30), endTime: new Date().setHours(15,15), actualDuration: 2700, completed: true, tagId: "s" },
-];
 
 export default function CalendarPage() {
   const { history } = useStore();
@@ -26,13 +19,12 @@ export default function CalendarPage() {
 
   const allRecords = useMemo(() => {
     const real = history.filter(r => r.startTime >= weekStart.getTime() && r.startTime < weekEnd.getTime());
-    return real.length > 0 ? real : DEMO;
+    return real;
   }, [history, weekStart, weekEnd]);
 
   const weekLabel = () => {
     const s = weekStart, e = addDays(weekStart, 6);
-    const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${m[s.getMonth()]} ${s.getDate()} – ${m[e.getMonth()]} ${e.getDate()}`;
+    return `${s.getMonth() + 1}月${s.getDate()}日 – ${e.getMonth() + 1}月${e.getDate()}日`;
   };
 
   const ROW_H = 64;
@@ -74,7 +66,19 @@ export default function CalendarPage() {
       </div>
 
       {/* Timeline — no hard lines, just colored blocks */}
-      <div style={{ flex: 1, overflow: "auto", paddingBottom: 100 }}>
+      <div style={{ flex: 1, overflow: "auto", paddingBottom: 100, position: "relative" }}>
+        {allRecords.length === 0 && (
+          <div style={{
+            position: "absolute", inset: "96px 20px auto 68px", zIndex: 3,
+            padding: "18px 20px", borderRadius: 22,
+            background: "var(--bg-glass)", color: "var(--text-sec)",
+            border: "1px solid rgba(0,0,0,0.04)", lineHeight: 1.6,
+            boxShadow: "0 8px 30px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 4 }}>还没有专注记录</div>
+            <div style={{ fontSize: 13 }}>完成一个番茄后，这里会按时间轴显示真实记录。</div>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "48px repeat(7, 1fr)" }}>
           {HOURS.map(hour => (
             <div key={hour} style={{ display: "contents" }}>
@@ -118,7 +122,7 @@ export default function CalendarPage() {
                           zIndex: 2,
                         }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: "#FFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.tagName}</span>
-                          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{durMin}m</span>
+                          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{durMin}分</span>
                         </div>
                       );
                     })}

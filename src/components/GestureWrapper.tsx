@@ -34,7 +34,7 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
     const dx = e.clientX - startX.current;
     const dy = e.clientY - startY.current;
     const dt = Date.now() - startTime.current;
-    if (dt > 500 || dt < 30) return;
+    if (dt > 500 || dt < 10) return;
 
     const vx = Math.abs(dx), vy = Math.abs(dy);
     if (vx > vy && vx > 60) {

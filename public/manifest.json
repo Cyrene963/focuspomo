@@ -1,35 +1,29 @@
 {
+  "id": "/",
   "name": "FocusPomo",
   "short_name": "FocusPomo",
-  "description": "An open-source Pomodoro timer PWA",
-  "start_url": "/",
+  "description": "极简专注番茄钟，提供专注计时、统计和时间轴回顾。",
+  "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#F5F0EB",
-  "theme_color": "#F5F0EB",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#FFF8F0",
+  "theme_color": "#FFF8F0",
   "orientation": "portrait",
   "scope": "/",
-  "lang": "en",
-  "categories": [
-    "productivity"
-  ],
+  "lang": "zh-CN",
+  "categories": ["productivity"],
   "icons": [
+    { "src": "/icon-1779372627-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-1779372627-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-1779372627-apple.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
     {
-      "src": "/icon-1779372627-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-1779372627-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-1779372627-apple.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
+      "name": "开始番茄",
+      "short_name": "开始",
+      "description": "打开计时器开始专注",
+      "url": "/?shortcut=start",
+      "icons": [{ "src": "/icon-1779372627-192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [],

@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 
 const BAR_COLORS = ["#FFD60A", "#FFD60A", "#34C759", "#34C759", "#5AC8FA", "#FF6B4A", "#FF6B4A"];
 const PERIODS = ["week", "month", "year"] as const;
+const PERIOD_LABELS = { week: "本周", month: "本月", year: "今年" } as const;
 
 export default function StatsPage() {
   const { history } = useStore();
@@ -25,7 +26,7 @@ export default function StatsPage() {
   const abandoned = filtered.filter(r => !r.completed).length;
 
   const weekBars = useMemo(() => {
-    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const labels = ["一", "二", "三", "四", "五", "六", "日"];
     return labels.map((label, i) => {
       const dayIdx = (i + 1) % 7;
       const mins = Math.round(filtered.filter(r => new Date(r.startTime).getDay() === dayIdx).reduce((s, r) => s + r.actualDuration, 0) / 60);
@@ -63,7 +64,7 @@ export default function StatsPage() {
     <div style={{ height: "100%", width: "100%", background: "var(--bg)", overflow: "auto", padding: "52px 16px 120px", transition: "background 0.4s" }}>
       {/* Header */}
       <div style={{ padding: "0 8px 24px" }}>
-        <span style={{ fontSize: "clamp(24px, 5vw, 32px)", fontWeight: 800, color: "var(--text)" }}>Stats</span>
+        <span style={{ fontSize: "clamp(24px, 5vw, 32px)", fontWeight: 800, color: "var(--text)" }}>统计</span>
       </div>
 
       {/* Period tabs */}
@@ -75,7 +76,7 @@ export default function StatsPage() {
             color: period === p ? "var(--bg)" : "var(--text-sec)",
             fontSize: 13, fontWeight: 600, transition: "all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
           }}>
-            {p.charAt(0).toUpperCase() + p.slice(1)}
+            {PERIOD_LABELS[p]}
           </button>
         ))}
       </div>
@@ -85,9 +86,9 @@ export default function StatsPage() {
 
         {/* FOCUS TREND */}
         <div style={cardStyle}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Focus Trend</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", marginBottom: 6, letterSpacing: 0.5 }}>专注趋势</div>
           <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)", marginBottom: 4 }}>{Math.floor(totalMin/60)}h {totalMin%60}m</div>
-          <div style={{ fontSize: 12, color: "var(--text-sec)", marginBottom: 28 }}>This {period}</div>
+          <div style={{ fontSize: 12, color: "var(--text-sec)", marginBottom: 28 }}>{PERIOD_LABELS[period]}</div>
           {/* Bar chart */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
             {weekBars.map((bar, i) => (
@@ -109,18 +110,18 @@ export default function StatsPage() {
         <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", textTransform: "uppercase", letterSpacing: 0.5 }}>Today&apos;s Pomos</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5 }}>完成番茄</div>
               <div style={{ fontSize: "clamp(36px, 8vw, 52px)", fontWeight: 800, color: "var(--accent)", marginTop: 4 }}>{completed}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", textTransform: "uppercase", letterSpacing: 0.5 }}>Abandoned</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5 }}>中断</div>
               <div style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 700, color: "var(--text-sec)", marginTop: 4 }}>{abandoned}</div>
             </div>
           </div>
           {/* Tomato grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
             {recentTomatoes.length === 0 ? (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 32, color: "var(--text-sec)", fontSize: 13 }}>No tomatoes yet</div>
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 32, color: "var(--text-sec)", fontSize: 13 }}>还没有番茄</div>
             ) : recentTomatoes.map(r => (
               <div key={r.id} style={{
                 aspectRatio: "1", borderRadius: "50%",
@@ -134,11 +135,11 @@ export default function StatsPage() {
         {/* ALL DATA */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Total Pomos</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>累计番茄</div>
             <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{history.filter(r => r.completed).length}</div>
           </div>
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Total Hours</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>累计小时</div>
             <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{Math.round(history.reduce((s, r) => s + r.actualDuration, 0) / 3600)}h</div>
           </div>
         </div>
@@ -146,8 +147,8 @@ export default function StatsPage() {
         {/* STREAK */}
         <div style={{ ...cardStyle, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Current Streak</div>
-            <div style={{ fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 800, color: "var(--text)" }}>{streak} days 🔥</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>连续专注</div>
+            <div style={{ fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 800, color: "var(--text)" }}>{streak} 天 🔥</div>
           </div>
           <div style={{
             width: 56, height: 56, borderRadius: 20,
@@ -158,9 +159,9 @@ export default function StatsPage() {
 
         {/* TAG DISTRIBUTION */}
         <div style={cardStyle}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 24 }}>By Tag</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 24 }}>按标签</div>
           {tagStats.length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--text-sec)", fontSize: 13, padding: 28 }}>No data yet</div>
+            <div style={{ textAlign: "center", color: "var(--text-sec)", fontSize: 13, padding: 28 }}>还没有数据</div>
           ) : tagStats.map((tag, i) => {
             const pct = totalMin > 0 ? (tag.mins / totalMin) * 100 : 0;
             return (
@@ -170,7 +171,7 @@ export default function StatsPage() {
                 <div style={{ flex: 1, height: 8, background: "var(--separator)", borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${pct}%`, background: tag.color, borderRadius: 4, transition: "width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }} />
                 </div>
-                <span style={{ fontSize: 12, color: "var(--text-sec)", width: 44, textAlign: "right" }}>{Math.round(tag.mins)}m</span>
+                <span style={{ fontSize: 12, color: "var(--text-sec)", width: 44, textAlign: "right" }}>{Math.round(tag.mins)}分</span>
               </div>
             );
           })}

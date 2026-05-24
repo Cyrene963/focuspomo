@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 
 export type TimerState = 'idle' | 'running' | 'completed';
-export type Page = 'timer' | 'stats' | 'settings' | 'summary';
+export type TimerSession = 'focus' | 'shortBreak' | 'longBreak';
+export type Page = 'timer' | 'stats' | 'calendar' | 'settings' | 'summary';
 
 export interface Tag {
   id: string;
@@ -30,6 +31,8 @@ interface Store {
   // Timer
   state: TimerState;
   selectedTag: Tag;
+  session: TimerSession;
+  activeDuration: number;
   remaining: number;
   startTime: number | null;
   muted: boolean;
@@ -39,9 +42,11 @@ interface Store {
   addTag: (t: Omit<Tag, 'id'>) => void;
   removeTag: (id: string) => void;
   selectTag: (id: string) => void;
+  setSelectedTagDuration: (seconds: number) => void;
 
   // Timer actions
   start: () => void;
+  startBreak: () => void;
   complete: () => void;
   interrupt: () => void;
   reset: () => void;
@@ -56,9 +61,15 @@ interface Store {
   pomodoroCycle: number;
   shortBreak: number;
   longBreak: number;
+  vibration: boolean;
+  use24HourTime: boolean;
+  displayTomatoes: boolean;
   setPomodoroCycle: (n: number) => void;
   setShortBreak: (s: number) => void;
   setLongBreak: (s: number) => void;
+  toggleVibration: () => void;
+  toggle24HourTime: () => void;
+  toggleDisplayTomatoes: () => void;
 }
 
 // --- Persistence ---
@@ -72,12 +83,12 @@ function saveJSON(key: string, val: unknown) {
 }
 
 const DEFAULT_TAGS: Tag[] = [
-  { id: 'focus', name: 'Focus', color: '#E07A45', duration: 25 * 60 },
-  { id: 'work', name: 'Work', color: '#55A67A', duration: 60 * 60 },
-  { id: 'study', name: 'Study', color: '#3ABFBF', duration: 45 * 60 },
-  { id: 'read', name: 'Read', color: '#B8C840', duration: 30 * 60 },
-  { id: 'fitness', name: 'Fitness', color: '#D4A82A', duration: 10 * 60 },
-  { id: 'design', name: 'Design', color: '#D4A82A', duration: 45 * 60 },
+  { id: 'focus', name: '专注', color: '#E07A45', duration: 25 * 60 },
+  { id: 'work', name: '工作', color: '#55A67A', duration: 60 * 60 },
+  { id: 'study', name: '学习', color: '#3ABFBF', duration: 45 * 60 },
+  { id: 'read', name: '阅读', color: '#B8C840', duration: 30 * 60 },
+  { id: 'fitness', name: '运动', color: '#D4A82A', duration: 10 * 60 },
+  { id: 'design', name: '创作', color: '#D4A82A', duration: 45 * 60 },
 ];
 
 const savedTags = loadJSON<Tag[]>('fp-tags', DEFAULT_TAGS);
@@ -90,6 +101,8 @@ export const useStore = create<Store>((set, get) => ({
 
   state: 'idle',
   selectedTag: initTag,
+  session: 'focus',
+  activeDuration: initTag.duration,
   remaining: initTag.duration,
   startTime: null,
   muted: loadJSON('fp-muted', false),
@@ -113,13 +126,42 @@ export const useStore = create<Store>((set, get) => ({
       set({ selectedTag: tag, remaining: tag.duration });
     }
   },
+  setSelectedTagDuration: (seconds) => {
+    const clamped = Math.max(60, Math.min(120 * 60, Math.round(seconds)));
+    const { selectedTag, tags, state } = get();
+    const updatedTag = { ...selectedTag, duration: clamped };
+    const updatedTags = tags.map(t => t.id === selectedTag.id ? updatedTag : t);
+    saveJSON('fp-tags', updatedTags);
+    set({
+      tags: updatedTags,
+      selectedTag: updatedTag,
+      activeDuration: state === 'running' ? get().activeDuration : clamped,
+      remaining: state === 'running' ? get().remaining : clamped,
+    });
+  },
 
   start: () => {
     const { selectedTag } = get();
-    set({ state: 'running', remaining: selectedTag.duration, startTime: Date.now() });
+    set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: Date.now() });
+  },
+  startBreak: () => {
+    const { shortBreak, longBreak, cycleCount, pomodoroCycle } = get();
+    const useLongBreak = cycleCount > 0 && cycleCount % Math.max(1, pomodoroCycle) === 0;
+    const duration = useLongBreak ? longBreak : shortBreak;
+    set({
+      state: 'running',
+      session: useLongBreak ? 'longBreak' : 'shortBreak',
+      activeDuration: duration,
+      remaining: duration,
+      startTime: Date.now(),
+    });
   },
   complete: () => {
-    const { selectedTag, startTime, history, cycleCount } = get();
+    const { selectedTag, startTime, history, cycleCount, session } = get();
+    if (session !== 'focus') {
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
+      return;
+    }
     const now = Date.now();
     const record: PomodoroRecord = {
       id: crypto.randomUUID(),
@@ -134,7 +176,9 @@ export const useStore = create<Store>((set, get) => ({
     };
     const h = [...history, record];
     saveJSON('fp-history', h);
-    set({ state: 'completed', remaining: 0, history: h, cycleCount: cycleCount + 1 });
+    const nextCycleCount = cycleCount + 1;
+    saveJSON('fp-cycle-count', nextCycleCount);
+    set({ state: 'completed', session: 'focus', remaining: 0, history: h, cycleCount: nextCycleCount });
   },
   interrupt: () => {
     const { selectedTag, startTime, history } = get();
@@ -153,19 +197,19 @@ export const useStore = create<Store>((set, get) => ({
       };
       const h = [...history, record];
       saveJSON('fp-history', h);
-      set({ state: 'idle', remaining: selectedTag.duration, startTime: null, history: h });
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, history: h });
     } else {
-      set({ state: 'idle', remaining: selectedTag.duration, startTime: null });
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
     }
   },
   reset: () => {
-    set({ state: 'idle', remaining: get().selectedTag.duration, startTime: null });
+    set({ state: 'idle', session: 'focus', activeDuration: get().selectedTag.duration, remaining: get().selectedTag.duration, startTime: null });
   },
   tick: () => {
-    const { state, startTime, selectedTag } = get();
+    const { state, startTime, activeDuration } = get();
     if (state !== 'running' || !startTime) return;
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    const remaining = Math.max(selectedTag.duration - elapsed, 0);
+    const remaining = Math.max(activeDuration - elapsed, 0);
     if (remaining <= 0) { get().complete(); return; }
     set({ remaining });
   },
@@ -178,10 +222,16 @@ export const useStore = create<Store>((set, get) => ({
   history: loadJSON<PomodoroRecord[]>('fp-history', []),
   cycleCount: loadJSON('fp-cycle-count', 0),
 
-  pomodoroCycle: 4,
-  shortBreak: 5 * 60,
-  longBreak: 20 * 60,
-  setPomodoroCycle: (n) => set({ pomodoroCycle: n }),
-  setShortBreak: (s) => set({ shortBreak: s }),
-  setLongBreak: (s) => set({ longBreak: s }),
+  pomodoroCycle: loadJSON('fp-pomodoro-cycle', 4),
+  shortBreak: loadJSON('fp-short-break', 5 * 60),
+  longBreak: loadJSON('fp-long-break', 20 * 60),
+  vibration: loadJSON('fp-vibration', true),
+  use24HourTime: loadJSON('fp-24-hour-time', false),
+  displayTomatoes: loadJSON('fp-display-tomatoes', true),
+  setPomodoroCycle: (n) => { saveJSON('fp-pomodoro-cycle', n); set({ pomodoroCycle: n }); },
+  setShortBreak: (s) => { saveJSON('fp-short-break', s); set({ shortBreak: s }); },
+  setLongBreak: (s) => { saveJSON('fp-long-break', s); set({ longBreak: s }); },
+  toggleVibration: () => { const v = !get().vibration; saveJSON('fp-vibration', v); set({ vibration: v }); },
+  toggle24HourTime: () => { const v = !get().use24HourTime; saveJSON('fp-24-hour-time', v); set({ use24HourTime: v }); },
+  toggleDisplayTomatoes: () => { const v = !get().displayTomatoes; saveJSON('fp-display-tomatoes', v); set({ displayTomatoes: v }); },
 }));

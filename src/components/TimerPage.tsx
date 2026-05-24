@@ -26,10 +26,10 @@ function playDing(muted: boolean) {
 }
 
 export default function TimerPage() {
-  const { state, selectedTag, remaining, muted, start, interrupt, tick, toggleMute, reset, setPage } = useStore();
+  const { state, session, selectedTag, remaining, muted, vibration, start, startBreak, interrupt, tick, toggleMute, reset, setPage } = useStore();
 
   const goStats = useCallback(() => setPage("stats"), [setPage]);
-  const goSettings = useCallback(() => setPage("settings"), [setPage]);
+  const goCalendar = useCallback(() => setPage("calendar"), [setPage]);
   const goSummary = useCallback(() => setPage("summary"), [setPage]);
   const [showTags, setShowTags] = useState(false);
   const [holdActive, setHoldActive] = useState(false);
@@ -41,6 +41,8 @@ export default function TimerPage() {
 
   const isActive = state === "running";
   const isCompleted = state === "completed";
+  const isBreak = session !== "focus";
+  const sessionLabel = session === "shortBreak" ? "短休息" : session === "longBreak" ? "长休息" : selectedTag.name;
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
 
@@ -60,12 +62,12 @@ export default function TimerPage() {
       playDing(muted);
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 800);
-      try { if (navigator.vibrate) navigator.vibrate(200); } catch {}
-      setDropTrigger({ completed: true, durationSeconds: selectedTag.duration });
+      try { if (vibration && navigator.vibrate) navigator.vibrate(200); } catch {}
+      if (!isBreak) setDropTrigger({ completed: true, durationSeconds: selectedTag.duration });
       setTimeout(() => setDropTrigger(null), 100);
     }
     prevStateRef.current = state;
-  }, [state, muted, selectedTag.duration]);
+  }, [state, muted, vibration, selectedTag.duration, isBreak]);
 
   // Hold-to-stop — cancels if finger moves (swipe detection)
   const holdStartPos = useRef({ x: 0, y: 0 });
@@ -129,7 +131,7 @@ export default function TimerPage() {
       <AnimatePresence>
         {isActive && (
           <motion.button
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
             className="pressable"
             style={{ position: "absolute", right: 20, top: 60, zIndex: 30, padding: 10 }}
@@ -189,16 +191,8 @@ export default function TimerPage() {
                 <svg width="14" height="14" viewBox="0 0 8 12" fill="none" stroke="var(--text)" strokeWidth="1.5" strokeLinecap="round"><path d="M1 1l5 5-5 5" /></svg>
               </motion.button>
 
-              {/* Mode dots */}
-              <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
-                {["Focus", "Short", "Long", "Custom"].map((_, i) => (
-                  <div key={i} style={{
-                    width: 7, height: 7, borderRadius: "50%",
-                    background: i === 0 ? "var(--text)" : "transparent",
-                    outline: i === 0 ? "none" : "1.5px solid var(--text-sec)",
-                    opacity: i === 0 ? 1 : 0.3,
-                  }} />
-                ))}
+              <div style={{ marginTop: 24, fontSize: 13, fontWeight: 600, color: "var(--text-sec)" }}>
+                完成后会收获一个小番茄
               </div>
 
               <div style={{ flex: 1, minHeight: 40 }} />
@@ -220,7 +214,7 @@ export default function TimerPage() {
                   boxShadow: "0 10px 25px -5px rgba(45,38,37,0.3), 0 4px 10px -2px rgba(0,0,0,0.1)",
                 }}
               >
-                Start {selectedTag.name}
+                开始{selectedTag.name}
               </motion.button>
             </motion.div>
           )}
@@ -230,12 +224,12 @@ export default function TimerPage() {
         <AnimatePresence>
           {isActive && (
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <motion.span
                 className="timer-number"
-                initial={{ scale: 0.9, opacity: 0 }}
+                initial={false}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 style={{
@@ -244,6 +238,11 @@ export default function TimerPage() {
               >
                 {mm}:{ss}
               </motion.span>
+              {isBreak && (
+                <div style={{ position: "absolute", top: "58%", fontSize: 17, fontWeight: 700, color: "var(--text-sec)" }}>
+                  {sessionLabel}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -252,22 +251,22 @@ export default function TimerPage() {
         <AnimatePresence>
           {isCompleted && (
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
             >
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
                 style={{ fontSize: 72 }}>🍅</motion.div>
-              <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>Well done!</span>
+              <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>完成啦！</span>
               <span style={{ fontSize: 17, color: "var(--text-sec)" }}>+1 🍅</span>
               <div style={{ display: "flex", gap: 14, marginTop: 28 }}>
-                <motion.button whileTap={{ scale: 0.94 }} onClick={(e) => { e.stopPropagation(); reset(); }}
+                <motion.button whileTap={{ scale: 0.94 }} onClick={(e) => { e.stopPropagation(); startBreak(); }}
                   style={{ padding: "14px 32px", borderRadius: 28, background: "var(--leaf)", color: "#FFF", fontSize: 16, fontWeight: 700 }}>
-                  Start Break
+                  开始休息
                 </motion.button>
                 <motion.button whileTap={{ scale: 0.94 }} onClick={(e) => { e.stopPropagation(); reset(); }}
                   style={{ padding: "14px 32px", borderRadius: 28, background: "var(--separator)", color: "var(--text)", fontSize: 16, fontWeight: 600 }}>
-                  Skip
+                  跳过
                 </motion.button>
               </div>
             </motion.div>
@@ -294,7 +293,7 @@ export default function TimerPage() {
               if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
               setHoldActive(false);
               if (dx < 0) goStats();
-              if (dx > 0) goSettings();
+              if (dx > 0) goCalendar();
               return;
             }
             if (vy > vx && dy > 80) {
@@ -320,7 +319,7 @@ export default function TimerPage() {
               fontSize: 14, fontWeight: 500, color: holdActive ? "var(--text)" : "var(--text-sec)",
               whiteSpace: "nowrap", opacity: holdActive ? 1 : 0.5, transition: "all 0.3s",
             }}>
-              Hold To Stop {selectedTag.name}
+              长按停止{sessionLabel}
             </span>
             <div style={{
               width: 200, height: 5, borderRadius: 3,

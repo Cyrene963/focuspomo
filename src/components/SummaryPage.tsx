@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 
 export default function SummaryPage() {
-  const { history } = useStore();
+  const { history, setPage } = useStore();
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -24,7 +24,6 @@ export default function SummaryPage() {
     return { totalMin, completedCount: completed.length, streak, monthRecords };
   }, [history]);
 
-  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const now = new Date();
 
   return (
@@ -36,10 +35,10 @@ export default function SummaryPage() {
       {/* Welcome */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontSize: "clamp(24px, 5vw, 32px)", fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>
-          Welcome ^ ^
+          今天也要加油 ^ ^
         </div>
         <div style={{ fontSize: 13, color: "var(--text-sec)", fontStyle: "italic", lineHeight: 1.5 }}>
-          &ldquo;What I do today is important because I am exchanging a day of my life for it.&rdquo;
+          &ldquo;今天认真做的小事，都会变成明天看得见的进步。&rdquo;
         </div>
       </div>
 
@@ -56,9 +55,9 @@ export default function SummaryPage() {
       {/* 3 stat cards — no background, just text */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, marginBottom: 28 }}>
         {[
-          { value: `${stats.totalMin}`, label: "min focused" },
-          { value: `${stats.completedCount}`, label: "completed" },
-          { value: `${stats.streak}`, label: "day streak" },
+          { value: `${stats.totalMin}`, label: "专注分钟" },
+          { value: `${stats.completedCount}`, label: "完成番茄" },
+          { value: `${stats.streak}`, label: "连续天数" },
         ].map((s, i) => (
           <div key={i} style={{ textAlign: "center" }}>
             <div style={{ fontSize: "clamp(26px, 6vw, 36px)", fontWeight: 700, color: "var(--text)" }}>{s.value}</div>
@@ -70,14 +69,21 @@ export default function SummaryPage() {
       {/* Tomato grid header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>本月番茄</span>
-        <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 500 }}>查看统计 ›</span>
+        <button
+          type="button"
+          onClick={() => setPage("stats")}
+          className="pressable"
+          style={{ fontSize: 13, color: "var(--accent)", fontWeight: 500, background: "none", padding: 0 }}
+        >
+          查看统计 ›
+        </button>
       </div>
 
       {/* Tomato grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10, justifyItems: "center" }}>
         {stats.monthRecords.filter(r => r.completed).length === 0 ? (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 40, color: "var(--text-sec)", fontSize: 13 }}>
-            No tomatoes this month yet
+            本月还没有番茄
           </div>
         ) : (
           stats.monthRecords.filter(r => r.completed).map(r => (
@@ -111,7 +117,7 @@ export default function SummaryPage() {
                 }} />
               </div>
               <span style={{ fontSize: 10, color: "var(--text-sec)" }}>
-                {Math.round(r.actualDuration / 60)}min
+                {Math.round(r.actualDuration / 60)}分
               </span>
             </div>
           ))

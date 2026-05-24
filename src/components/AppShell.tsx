@@ -11,6 +11,13 @@ import CalendarPage from "@/components/CalendarPage";
 import SummaryPage from "@/components/SummaryPage";
 
 const DOT_PAGES: Page[] = ["stats", "timer", "calendar", "settings"];
+const DOT_LABELS: Record<Page, string> = {
+  timer: "计时器",
+  stats: "统计",
+  calendar: "日历",
+  settings: "设置",
+  summary: "今日总结",
+};
 
 function swipeLeftFrom(page: Page): Page | null {
   switch (page) {
@@ -100,22 +107,29 @@ export default function AppShell() {
       </AnimatePresence>
 
       <div style={{
-        position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)",
-        display: "flex", gap: 6, zIndex: 10,
+        position: "absolute", bottom: "max(24px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
+        display: "flex", gap: 2, zIndex: 10,
       }}>
         {DOT_PAGES.map(p => (
           <button
             key={p}
+            type="button"
             onClick={() => go(p)}
             className="pressable"
-            aria-label={p}
+            aria-label={DOT_LABELS[p]}
+            aria-current={p === page ? "page" : undefined}
             style={{
+              width: 44, height: 44, borderRadius: 22,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <span style={{
               width: p === page ? 22 : 6, height: 6, borderRadius: 3,
               background: p === page ? "var(--accent)" : "var(--text-sec)",
               opacity: p === page ? 1 : 0.3,
               transition: "all 0.25s ease",
-            }}
-          />
+            }} />
+          </button>
         ))}
       </div>
     </div>
