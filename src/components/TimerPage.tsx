@@ -34,6 +34,7 @@ export default function TimerPage() {
   const [showTags, setShowTags] = useState(false);
   const [holdActive, setHoldActive] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [dropTrigger, setDropTrigger] = useState<{ completed: boolean; durationSeconds: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -77,8 +78,12 @@ export default function TimerPage() {
     holdStartPos.current = { x: e.clientX, y: e.clientY };
     setHoldActive(true);
     holdTimerRef.current = setTimeout(() => {
-      interrupt();
+      setIsStopping(true);
       setHoldActive(false);
+      window.setTimeout(() => {
+        interrupt();
+        setIsStopping(false);
+      }, 140);
     }, 1500);
   }, [isActive, interrupt]);
 
@@ -99,6 +104,8 @@ export default function TimerPage() {
   }, []);
 
   useEffect(() => () => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); }, []);
+
+  const panelTransition = { type: "spring" as const, stiffness: 190, damping: 24, mass: 0.86 };
 
   // Atmospheric fluid gradient
   const bgColor = isActive
@@ -148,20 +155,21 @@ export default function TimerPage() {
       </AnimatePresence>
 
       {/* ===== CONTENT LAYER (z-index 1) ===== */}
-      <div style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-
-        {/* IDLE STATE */}
-        <AnimatePresence>
+      <div style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", overflow: "hidden" }}>
+        <AnimatePresence mode="wait" initial={false}>
           {!isActive && !isCompleted && (
             <motion.div
-              initial={false} animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.3 }}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}
+              key="idle"
+              initial={{ opacity: 0, scale: 0.985 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.018 }}
+              transition={panelTransition}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}
             >
               <div style={{ flex: 1, minHeight: 80 }} />
 
               {/* Timer circle */}
-              <div style={{
+              <motion.div layoutId="timer-face" style={{
                 width: "clamp(200px, 45vw, 380px)",
                 height: "clamp(200px, 45vw, 380px)",
                 borderRadius: "50%",
@@ -173,7 +181,7 @@ export default function TimerPage() {
                 }}>
                   {mm}:{ss}
                 </span>
-              </div>
+              </motion.div>
 
               {/* Tag selector */}
               <motion.button
@@ -200,7 +208,7 @@ export default function TimerPage() {
               {/* Start button */}
               <motion.button
                 onClick={(e) => { e.stopPropagation(); start(); }}
-                className="pressable" whileTap={{ scale: 0.94 }}
+                className="pressable" whileTap={{ scale: 0.96 }}
                 style={{
                   marginBottom: 100,
                   width: "clamp(200px, 55vw, 260px)",
@@ -218,20 +226,20 @@ export default function TimerPage() {
               </motion.button>
             </motion.div>
           )}
-        </AnimatePresence>
 
-        {/* RUNNING STATE */}
-        <AnimatePresence>
           {isActive && (
             <motion.div
-              initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+              key="running"
+              initial={{ opacity: 0, scale: 0.982 }}
+              animate={{ opacity: isStopping ? 0.7 : 1, scale: isStopping ? 0.985 : 1 }}
+              exit={{ opacity: 0, scale: 0.982 }}
+              transition={panelTransition}
+              style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <motion.span
+                layoutId="timer-face"
                 className="timer-number"
-                initial={false}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                transition={panelTransition}
                 style={{
                   fontSize: "clamp(5rem, 15vw, 15rem)",
                 }}
@@ -245,14 +253,15 @@ export default function TimerPage() {
               )}
             </motion.div>
           )}
-        </AnimatePresence>
 
-        {/* COMPLETED STATE */}
-        <AnimatePresence>
           {isCompleted && (
             <motion.div
-              initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
+              key="completed"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.985 }}
+              transition={panelTransition}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
             >
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
@@ -260,11 +269,11 @@ export default function TimerPage() {
               <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>完成啦！</span>
               <span style={{ fontSize: 17, color: "var(--text-sec)" }}>+1 🍅</span>
               <div style={{ display: "flex", gap: 14, marginTop: 28 }}>
-                <motion.button whileTap={{ scale: 0.94 }} onClick={(e) => { e.stopPropagation(); startBreak(); }}
+                <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); startBreak(); }}
                   style={{ padding: "14px 32px", borderRadius: 28, background: "var(--leaf)", color: "#FFF", fontSize: 16, fontWeight: 700 }}>
                   开始休息
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.94 }} onClick={(e) => { e.stopPropagation(); reset(); }}
+                <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); reset(); }}
                   style={{ padding: "14px 32px", borderRadius: 28, background: "var(--separator)", color: "var(--text)", fontSize: 16, fontWeight: 600 }}>
                   跳过
                 </motion.button>
