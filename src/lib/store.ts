@@ -2,7 +2,9 @@ import { create } from 'zustand';
 
 export type TimerState = 'idle' | 'running' | 'completed';
 export type TimerSession = 'focus' | 'shortBreak' | 'longBreak';
-export type Page = 'timer' | 'stats' | 'calendar' | 'settings' | 'summary';
+export type Page = 'timer' | 'stats' | 'tasks' | 'calendar' | 'settings' | 'summary';
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskQuadrant = 'do' | 'schedule' | 'delegate' | 'drop';
 
 export interface Tag {
   id: string;
@@ -21,6 +23,22 @@ export interface PomodoroRecord {
   startTime: number;
   endTime: number;
   completed: boolean;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  notes?: string;
+  priority: TaskPriority;
+  important: boolean;
+  urgent: boolean;
+  estimatedPomodoros: number;
+  completed: boolean;
+  plannedToday: boolean;
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
+  dueDate?: number;
 }
 
 interface Store {
@@ -56,6 +74,16 @@ interface Store {
   // History
   history: PomodoroRecord[];
   cycleCount: number;
+
+  // Tasks
+  tasks: TaskItem[];
+  addTask: (input: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed' | 'plannedToday'> & Partial<Pick<TaskItem, 'completed' | 'plannedToday'>>) => void;
+  updateTask: (id: string, patch: Partial<Omit<TaskItem, 'id' | 'createdAt'>>) => void;
+  toggleTask: (id: string) => void;
+  deleteTask: (id: string) => void;
+  smartPlanToday: () => void;
+  splitTask: (id: string) => void;
+  clearCompletedTasks: () => void;
 
   // Settings
   pomodoroCycle: number;
@@ -221,6 +249,104 @@ export const useStore = create<Store>((set, get) => ({
 
   history: loadJSON<PomodoroRecord[]>('fp-history', []),
   cycleCount: loadJSON('fp-cycle-count', 0),
+
+  tasks: loadJSON<TaskItem[]>('fp-tasks', []),
+  addTask: (input) => {
+    const now = Date.now();
+    const task: TaskItem = {
+      id: crypto.randomUUID().slice(0, 10),
+      title: input.title.trim(),
+      notes: input.notes?.trim() || undefined,
+      priority: input.priority,
+      important: input.important,
+      urgent: input.urgent,
+      estimatedPomodoros: Math.max(1, Math.min(8, Math.round(input.estimatedPomodoros || 1))),
+      completed: input.completed ?? false,
+      plannedToday: input.plannedToday ?? false,
+      dueDate: input.dueDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (!task.title) return;
+    const tasks = [task, ...get().tasks];
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  updateTask: (id, patch) => {
+    const tasks = get().tasks.map(t => t.id === id ? { ...t, ...patch, updatedAt: Date.now() } : t);
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  toggleTask: (id) => {
+    const tasks = get().tasks.map(t => {
+      if (t.id !== id) return t;
+      const done = !t.completed;
+      return { ...t, completed: done, plannedToday: done ? false : t.plannedToday, completedAt: done ? Date.now() : undefined, updatedAt: Date.now() };
+    });
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  deleteTask: (id) => {
+    const tasks = get().tasks.filter(t => t.id !== id);
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  smartPlanToday: () => {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const scored = get().tasks
+      .filter(t => !t.completed)
+      .map(t => {
+        const dueBoost = t.dueDate ? Math.max(0, 4 - Math.floor((t.dueDate - now) / day)) : 0;
+        const score =
+          (t.important ? 8 : 0) +
+          (t.urgent ? 5 : 0) +
+          ({ high: 4, medium: 2, low: 0 } as Record<TaskPriority, number>)[t.priority] +
+          dueBoost -
+          Math.max(0, t.estimatedPomodoros - 2) * 0.8;
+        return { id: t.id, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(x => x.id);
+    const tasks = get().tasks.map(t => ({ ...t, plannedToday: scored.includes(t.id), updatedAt: scored.includes(t.id) ? Date.now() : t.updatedAt }));
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  splitTask: (id) => {
+    const source = get().tasks.find(t => t.id === id);
+    if (!source) return;
+    const pieces = source.title
+      .split(/[，,、；;\/]|\s+and\s+|\s+then\s+/i)
+      .map(s => s.trim())
+      .filter(s => s.length >= 2 && s !== source.title)
+      .slice(0, 5);
+    if (pieces.length <= 1) return;
+    const now = Date.now();
+    const children: TaskItem[] = pieces.map((title, i) => ({
+      id: crypto.randomUUID().slice(0, 10),
+      title,
+      notes: `来自拆解：${source.title}`,
+      priority: source.priority,
+      important: source.important,
+      urgent: source.urgent && i === 0,
+      estimatedPomodoros: 1,
+      completed: false,
+      plannedToday: source.plannedToday && i < 3,
+      dueDate: source.dueDate,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const tasks = [source, ...children, ...get().tasks.filter(t => t.id !== id)];
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+  clearCompletedTasks: () => {
+    const tasks = get().tasks.filter(t => !t.completed);
+    saveJSON('fp-tasks', tasks);
+    set({ tasks });
+  },
+
 
   pomodoroCycle: loadJSON('fp-pomodoro-cycle', 4),
   shortBreak: loadJSON('fp-short-break', 5 * 60),

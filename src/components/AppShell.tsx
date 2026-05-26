@@ -8,12 +8,14 @@ import TimerPage from "@/components/TimerPage";
 import StatsPage from "@/components/StatsPage";
 import SettingsPage from "@/components/SettingsPage";
 import CalendarPage from "@/components/CalendarPage";
+import TasksPage from "@/components/TasksPage";
 import SummaryPage from "@/components/SummaryPage";
 
-const DOT_PAGES: Page[] = ["stats", "timer", "calendar", "settings"];
+const DOT_PAGES: Page[] = ["stats", "timer", "tasks", "calendar", "settings"];
 const DOT_LABELS: Record<Page, string> = {
   timer: "计时器",
   stats: "统计",
+  tasks: "任务",
   calendar: "日历",
   settings: "设置",
   summary: "今日总结",
@@ -22,7 +24,8 @@ const DOT_LABELS: Record<Page, string> = {
 function swipeLeftFrom(page: Page): Page | null {
   switch (page) {
     case "timer": return "stats";
-    case "calendar": return "timer";
+    case "tasks": return "timer";
+    case "calendar": return "tasks";
     case "settings": return "calendar";
     default: return null;
   }
@@ -31,7 +34,8 @@ function swipeLeftFrom(page: Page): Page | null {
 function swipeRightFrom(page: Page): Page | null {
   switch (page) {
     case "stats": return "timer";
-    case "timer": return "calendar";
+    case "timer": return "tasks";
+    case "tasks": return "calendar";
     case "calendar": return "settings";
     default: return null;
   }
@@ -80,6 +84,15 @@ export default function AppShell() {
             onSwipeRight={swipeRight}
           >
             <StatsPage />
+          </GestureWrapper>
+        )}
+        {page === "tasks" && (
+          <GestureWrapper key="tasks" enterX={-60} enterY={0}
+            onSwipeLeft={swipeLeft}
+            onSwipeRight={swipeRight}
+            onSwipeDown={() => go("summary")}
+          >
+            <TasksPage />
           </GestureWrapper>
         )}
         {page === "calendar" && (

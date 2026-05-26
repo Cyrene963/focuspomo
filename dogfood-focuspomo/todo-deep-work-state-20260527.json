@@ -1,0 +1,86 @@
+{
+  "task_name": "focuspomo-todo-deep-work-20260527",
+  "target_app": "FocusPomo / App Store 我的番茄 parity + personal productivity layer",
+  "target_url": "https://focuspomo.bz9.me/",
+  "started_at": "2026-05-27T00:35:00+08:00",
+  "time_budget_minutes": 480,
+  "task_status": "completed",
+  "current_layer": 5,
+  "budget_expired": false,
+  "layers": [
+    {
+      "name": "preflight_and_context",
+      "prompt": "Verify project directory, prior dogfood state, runtime, and deployment target.",
+      "quality_gates": ["process:test -d /root/projects/focuspomo", "process:npm run build"]
+    },
+    {
+      "name": "product_audit_and_design",
+      "prompt": "Audit existing FocusPomo flows and design a minimal non-bloated task system based on top-3, Eisenhower, priority, and habit compounding.",
+      "quality_gates": ["process:static source review", "process:web research for todo app patterns"]
+    },
+    {
+      "name": "implementation",
+      "prompt": "Implement Tasks page, persisted data model, smart top-3 selection, quadrants, task completion stats, and app navigation integration.",
+      "quality_gates": ["process:npm run build"]
+    },
+    {
+      "name": "runtime_verification",
+      "prompt": "Restart PM2, verify local/public 200, verify served JS includes new task feature, and PWA assets remain healthy.",
+      "quality_gates": ["process:curl local/public", "process:served bundle marker", "process:PWA icon/SW checks"]
+    },
+    {
+      "name": "handoff_artifacts",
+      "prompt": "Update dogfood report/state with implementation and remaining gaps.",
+      "quality_gates": ["process:report files exist"]
+    }
+  ],
+  "layers_completed": [
+    {
+      "name": "preflight_and_context",
+      "completed_at": "2026-05-27T00:41:00+08:00",
+      "gate_results": [{"gate": "project exists + package/build context", "passed": true, "output": "/root/projects/focuspomo exists; package.json/src/ecosystem present; prior dogfood state reviewed."}]
+    },
+    {
+      "name": "product_audit_and_design",
+      "completed_at": "2026-05-27T00:45:00+08:00",
+      "gate_results": [{"gate": "design scope", "passed": true, "output": "Chose minimal top-3 + Eisenhower + pomodoro estimates; deferred Google Calendar sync until auth/account model exists."}]
+    },
+    {
+      "name": "implementation",
+      "completed_at": "2026-05-27T00:50:00+08:00",
+      "gate_results": [{"gate": "npm run build", "passed": true, "output": "Next.js build passed with existing middleware deprecation warning only."}]
+    },
+    {
+      "name": "runtime_verification",
+      "completed_at": "2026-05-27T00:54:00+08:00",
+      "gate_results": [
+        {"gate": "local/public HTTP", "passed": true, "output": "local=200 public=200; cf-cache-status DYNAMIC; no-store root headers."},
+        {"gate": "served JS marker", "passed": true, "output": "Served JS chunk contains 今日三件事 marker."},
+        {"gate": "PWA regression", "passed": true, "output": "SW no root cache.put/root static list; favicon ICO PNG payload; apple-touch icon RGBA 180x180."}
+      ]
+    },
+    {
+      "name": "handoff_artifacts",
+      "completed_at": "2026-05-27T00:56:00+08:00",
+      "gate_results": [{"gate": "artifact update", "passed": true, "output": "Updated state/report artifacts for this run."}]
+    }
+  ],
+  "layers_failed": [],
+  "total_gate_runs": 7,
+  "summary": {
+    "implemented": [
+      "New tasks page in swipe/nav flow between timer and calendar.",
+      "Persistent localStorage task model fp-tasks.",
+      "Top 3 daily planning panel.",
+      "Eisenhower quadrants: important/urgent matrix.",
+      "Priority labels, pomodoro effort estimates, completion toggles, delete, clear completed.",
+      "Smart deterministic top-3 planner that scores importance, urgency, priority, due date, and effort.",
+      "Simple split helper for comma/semicolon separated task dumps."
+    ],
+    "deferred": [
+      "Real model-backed AI task decomposition requires provider/API route and privacy policy; not shipped as fake UI.",
+      "Google account/calendar sync requires auth/sync architecture; not shipped as fake control."
+    ],
+    "claude_audit": "Attempted via /root/.hermes/node/bin/claude with available env file, but Claude CLI returned Not logged in; no Claude review was used."
+  }
+}
