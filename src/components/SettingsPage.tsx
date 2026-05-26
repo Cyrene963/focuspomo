@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 
@@ -129,11 +130,25 @@ function Stepper({
 export default function SettingsPage() {
   const store = useStore();
   const { theme, toggle: toggleTheme } = useTheme();
+  const [notificationStatus, setNotificationStatus] = useState(() =>
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"
+  );
   const durationMin = Math.round(store.selectedTag.duration / 60);
   const shortBreakMin = Math.round(store.shortBreak / 60);
   const longBreakMin = Math.round(store.longBreak / 60);
   const vibrationSupported = typeof navigator !== "undefined" && "vibrate" in navigator;
+  const notificationSupported = typeof window !== "undefined" && "Notification" in window;
   const setDurationMin = (min: number) => store.setSelectedTagDuration(Math.max(1, Math.min(120, min)) * 60);
+  const toggleNotifications = async () => {
+    if (!notificationSupported) return;
+    if (store.notificationsEnabled) {
+      store.setNotificationsEnabled(false);
+      return;
+    }
+    const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    setNotificationStatus(permission);
+    store.setNotificationsEnabled(permission === "granted");
+  };
 
   return (
     <div style={{
@@ -220,6 +235,11 @@ export default function SettingsPage() {
           title="声音提醒"
           subtitle="完成番茄时播放短提示音"
           right={<IOSToggle value={!store.muted} onToggle={store.toggleMute} />}
+        />
+        <Row
+          title="系统通知"
+          subtitle={notificationSupported ? (notificationStatus === "denied" ? "浏览器已拒绝通知，请在系统设置里重新允许。" : "完成番茄或休息结束时发本机通知。iPad 需安装到主屏幕后使用。") : "当前浏览器不支持 Web Notification，已避免显示假功能。"}
+          right={notificationSupported ? <IOSToggle value={store.notificationsEnabled && notificationStatus === "granted"} onToggle={toggleNotifications} color="#E8644E" /> : undefined}
         />
         {vibrationSupported && (
           <Row

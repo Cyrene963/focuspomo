@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(reg=>{if(reg.active){reg.active.postMessage({type:'CACHE_APP_SHELL'})}}).catch(()=>{})})}` }} />
       </body>
     </html>
   );

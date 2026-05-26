@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { useStore, type Page } from "@/lib/store";
 import GestureWrapper from "@/components/GestureWrapper";
+import { useStore, type Page } from "@/lib/store";
+import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
 import TimerPage from "@/components/TimerPage";
 import StatsPage from "@/components/StatsPage";
 import SettingsPage from "@/components/SettingsPage";
@@ -20,26 +21,6 @@ const DOT_LABELS: Record<Page, string> = {
   settings: "设置",
   summary: "今日总结",
 };
-
-function swipeLeftFrom(page: Page): Page | null {
-  switch (page) {
-    case "timer": return "stats";
-    case "tasks": return "timer";
-    case "calendar": return "tasks";
-    case "settings": return "calendar";
-    default: return null;
-  }
-}
-
-function swipeRightFrom(page: Page): Page | null {
-  switch (page) {
-    case "stats": return "timer";
-    case "timer": return "tasks";
-    case "tasks": return "calendar";
-    case "calendar": return "settings";
-    default: return null;
-  }
-}
 
 export default function AppShell() {
   const { page, setPage } = useStore();

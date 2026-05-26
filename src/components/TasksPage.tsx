@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { useStore, type TaskItem, type TaskPriority, type TaskQuadrant } from "@/lib/store";
 
-const QUADRANT_META: Record<TaskQuadrant, { title: string; short: string; desc: string; color: string }> = {
-  do: { title: "立即做", short: "重要且紧急", desc: "今天优先启动，别再拖。", color: "#E8644E" },
-  schedule: { title: "安排做", short: "重要不紧急", desc: "真正产生复利的长期任务。", color: "#55A67A" },
-  delegate: { title: "少量做", short: "紧急不重要", desc: "压缩、合并或快速处理。", color: "#D4A82A" },
-  drop: { title: "不做", short: "不重要不紧急", desc: "划掉，保护注意力。", color: "#86868B" },
+const QUADRANT_META: Record<TaskQuadrant, { title: string; short: string; desc: string; color: string; rule: string }> = {
+  do: { title: "① 先做", short: "重要且紧急", desc: "危机会滚大、今天不做就会付出代价。", rule: "只放 1 件，立刻开一个 25 分钟番茄。", color: "#E8644E" },
+  schedule: { title: "② 每天推进", short: "重要不紧急", desc: "真正产生复利：学习、项目、健康、长期能力。", rule: "每天至少 1 件，优先排进今日 Top 3。", color: "#55A67A" },
+  delegate: { title: "③ 批量处理", short: "紧急不重要", desc: "别人催、消息、杂事，不该吃掉深度时间。", rule: "能拒绝就拒绝，不能拒绝就压缩到 10 分钟。", color: "#D4A82A" },
+  drop: { title: "④ 划掉", short: "不重要不紧急", desc: "短视频式任务、假忙、可做可不做。", rule: "默认不做，保护注意力。", color: "#86868B" },
 };
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = { high: "高", medium: "中", low: "低" };
@@ -199,6 +199,7 @@ export default function TasksPage() {
   const weekDone = tasks.filter(t => t.completedAt && t.completedAt >= startOfWeek(new Date())).length;
   const progress = today.length ? today.filter(t => t.completed).length / today.length : Math.min(1, doneToday / 3);
 
+  const matrixOrder: TaskQuadrant[] = ["do", "schedule", "delegate", "drop"];
   const quadrants = useMemo(() => {
     const buckets: Record<TaskQuadrant, TaskItem[]> = { do: [], schedule: [], delegate: [], drop: [] };
     active.forEach(t => buckets[quadrantOf(t)].push(t));
@@ -213,12 +214,27 @@ export default function TasksPage() {
       <div style={{ padding: "0 24px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <div>
           <div style={{ fontSize: "clamp(28px, 6vw, 36px)", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.045em" }}>今天三件事</div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-sec)", lineHeight: 1.5 }}>先划掉噪音，再把注意力接到番茄钟。</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-sec)", lineHeight: 1.5 }}>顺序不是“谁急做谁”：先救火，再投资长期，杂事限时，垃圾划掉。</div>
         </div>
         <ProgressRing value={progress} />
       </div>
 
       <NewTaskForm />
+
+      <section style={{ margin: "0 16px 18px", borderRadius: 26, padding: "14px 16px", background: "rgba(45,38,37,0.045)", border: "1px solid rgba(0,0,0,0.04)" }}>
+        <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>怎么排优先级？</div>
+        {[
+          ["1", "重要且紧急", "今天不做会爆炸：先用一个番茄止血。"],
+          ["2", "重要不紧急", "最值得每天推进：能力、项目、健康，产生复利。"],
+          ["3", "紧急不重要", "设时间盒批量清掉，不让它抢走深度时间。"],
+          ["4", "不重要不紧急", "默认删除，尤其是会把你滑向长视频的事。"],
+        ].map(([n, title, desc]) => (
+          <div key={n} style={{ display: "grid", gridTemplateColumns: "24px 1fr", gap: 8, padding: "5px 0", alignItems: "start" }}>
+            <span style={{ width: 22, height: 22, borderRadius: 11, display: "grid", placeItems: "center", background: "var(--text)", color: "var(--bg)", fontSize: 12, fontWeight: 900 }}>{n}</span>
+            <div><span style={{ fontSize: 13, fontWeight: 850, color: "var(--text)" }}>{title}</span><span style={{ fontSize: 12, color: "var(--text-sec)", lineHeight: 1.45 }}> — {desc}</span></div>
+          </div>
+        ))}
+      </section>
 
       <section style={{ margin: "0 16px 18px", borderRadius: 26, padding: "16px 18px", background: "linear-gradient(135deg, rgba(232,100,78,0.12), rgba(85,166,122,0.10))", border: "1px solid rgba(232,100,78,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -241,7 +257,7 @@ export default function TasksPage() {
         </div>
       </section>
 
-      {(Object.keys(QUADRANT_META) as TaskQuadrant[]).map(q => {
+      {matrixOrder.map(q => {
         const meta = QUADRANT_META[q];
         const list = quadrants[q];
         return (
@@ -251,6 +267,7 @@ export default function TasksPage() {
                 <div style={{ fontSize: 17, fontWeight: 900, color: meta.color }}>{meta.title}</div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>{meta.short}</div>
                 <div style={{ fontSize: 12, color: "var(--text-sec)", marginTop: 3, lineHeight: 1.45 }}>{meta.desc}</div>
+                <div style={{ fontSize: 11, color: meta.color, marginTop: 5, fontWeight: 850, lineHeight: 1.45 }}>{meta.rule}</div>
               </div>
               <span style={{ minWidth: 28, height: 28, borderRadius: 14, background: `${meta.color}18`, color: meta.color, display: "grid", placeItems: "center", fontSize: 13, fontWeight: 900 }}>{list.length}</span>
             </div>

@@ -54,6 +54,7 @@ interface Store {
   remaining: number;
   startTime: number | null;
   muted: boolean;
+  notificationsEnabled: boolean;
 
   // Tags
   tags: Tag[];
@@ -70,6 +71,7 @@ interface Store {
   reset: () => void;
   tick: () => void;
   toggleMute: () => void;
+  setNotificationsEnabled: (v: boolean) => void;
 
   // History
   history: PomodoroRecord[];
@@ -134,6 +136,7 @@ export const useStore = create<Store>((set, get) => ({
   remaining: initTag.duration,
   startTime: null,
   muted: loadJSON('fp-muted', false),
+  notificationsEnabled: loadJSON('fp-notifications-enabled', false),
 
   tags: savedTags,
   addTag: (t) => {
@@ -245,6 +248,10 @@ export const useStore = create<Store>((set, get) => ({
     const m = !get().muted;
     saveJSON('fp-muted', m);
     set({ muted: m });
+  },
+  setNotificationsEnabled: (v) => {
+    saveJSON('fp-notifications-enabled', v);
+    set({ notificationsEnabled: v });
   },
 
   history: loadJSON<PomodoroRecord[]>('fp-history', []),

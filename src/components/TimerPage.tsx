@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
+import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
 import TagSelector from "@/components/TagSelector";
 import TomatoPhysics from "@/components/TomatoPhysics";
 
@@ -25,11 +26,31 @@ function playDing(muted: boolean) {
   } catch {}
 }
 
-export default function TimerPage() {
-  const { state, session, selectedTag, remaining, muted, vibration, start, startBreak, interrupt, tick, toggleMute, reset, setPage } = useStore();
+function notifyDone(enabled: boolean, title: string, body: string) {
+  if (!enabled || typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  try {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => reg.showNotification(title, { body, icon: "/icon-1779372627-192.png", badge: "/favicon-1779372627-32.png" }))
+        .catch(() => new Notification(title, { body, icon: "/icon-1779372627-192.png" }));
+    } else {
+      new Notification(title, { body, icon: "/icon-1779372627-192.png" });
+    }
+  } catch {}
+}
 
-  const goStats = useCallback(() => setPage("stats"), [setPage]);
-  const goCalendar = useCallback(() => setPage("calendar"), [setPage]);
+export default function TimerPage() {
+  const { state, session, selectedTag, remaining, muted, vibration, notificationsEnabled, start, startBreak, interrupt, tick, toggleMute, reset, setPage } = useStore();
+
+  const swipeLeft = useCallback(() => {
+    const next = swipeLeftFrom("timer");
+    if (next) setPage(next);
+  }, [setPage]);
+  const swipeRight = useCallback(() => {
+    const next = swipeRightFrom("timer");
+    if (next) setPage(next);
+  }, [setPage]);
   const goSummary = useCallback(() => setPage("summary"), [setPage]);
   const [showTags, setShowTags] = useState(false);
   const [holdActive, setHoldActive] = useState(false);
@@ -64,11 +85,12 @@ export default function TimerPage() {
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 800);
       try { if (vibration && navigator.vibrate) navigator.vibrate(200); } catch {}
+      notifyDone(notificationsEnabled, isBreak ? "休息结束" : "番茄完成", isBreak ? "可以回到下一轮专注了。" : `${selectedTag.name}完成了，收获一个小番茄。`);
       if (!isBreak) setDropTrigger({ completed: true, durationSeconds: selectedTag.duration });
       setTimeout(() => setDropTrigger(null), 100);
     }
     prevStateRef.current = state;
-  }, [state, muted, vibration, selectedTag.duration, isBreak]);
+  }, [state, muted, vibration, notificationsEnabled, selectedTag.name, selectedTag.duration, isBreak]);
 
   // Hold-to-stop — cancels if finger moves (swipe detection)
   const holdStartPos = useRef({ x: 0, y: 0 });
@@ -298,11 +320,11 @@ export default function TimerPage() {
             const dy = e.clientY - holdStartPos.current.y;
             const vx = Math.abs(dx), vy = Math.abs(dy);
             if (vx > vy && vx > 60) {
-              // Horizontal swipe — cancel hold, navigate
+              // Horizontal swipe — cancel hold, then reuse the shared relative page handlers.
               if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
               setHoldActive(false);
-              if (dx < 0) goStats();
-              if (dx > 0) goCalendar();
+              if (dx < 0) swipeLeft();
+              if (dx > 0) swipeRight();
               return;
             }
             if (vy > vx && dy > 80) {
