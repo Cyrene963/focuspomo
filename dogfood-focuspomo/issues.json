@@ -1,0 +1,210 @@
+[
+  {
+    "id": "P0-1",
+    "severity": "P0",
+    "category": "Functional/UX",
+    "title": "Settings Focus Duration slider is non-functional",
+    "evidence": "src/components/SettingsPage.tsx line 81 has onChange={() => {}}; user cannot change default Focus duration from settings.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T01:47:00+08:00",
+    "fix_summary": "Settings Focus Duration slider now calls store.setSelectedTagDuration and persists selected tag duration."
+  },
+  {
+    "id": "P1-1",
+    "severity": "P1",
+    "category": "Functional/UX",
+    "title": "Multiple Settings toggles are fake/no-op",
+    "evidence": "Vibration, 24-Hour Time, Display Tomatoes use fixed value with empty onToggle; rows with chevron also have no click behavior.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T01:47:00+08:00",
+    "fix_summary": "Vibration, 24-hour time, display tomatoes, break/cycle settings now have real persisted store state instead of empty handlers."
+  },
+  {
+    "id": "P1-2",
+    "severity": "P1",
+    "category": "Product parity",
+    "title": "Original app baseline features missing or not reachable",
+    "evidence": "App Store 我的番茄 baseline includes timeline, manual add focus time, count-up mode, custom cycles/break flow, weekly tomato accumulation; current reachable pages are timer/stats/settings/summary only and CalendarPage is not in Page type/navigation.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T01:47:00+08:00",
+    "fix_summary": "Existing CalendarPage is now reachable via swipe/dots/keyboard as a timeline page; fake demo records removed."
+  },
+  {
+    "id": "P1-3",
+    "severity": "P1",
+    "category": "Deployment stability",
+    "title": "PM2 logs contain repeated EADDRINUSE and missing production build errors",
+    "evidence": "Historical pm2 logs focuspomo showed repeated listen EADDRINUSE :::3457, missing .next BUILD_ID / required-server-files.json, and production build missing errors. Current service stayed online, but restart/deploy path was noisy and fragile until PM2 process state and logs were cleaned.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-24T03:25:00+08:00",
+    "fix_summary": "Re-saved PM2 process list, flushed stale logs, restarted focuspomo explicitly from ecosystem.config.js with update-env, then re-verified local+public 200 responses and clean fresh PM2 logs."
+  },
+  {
+    "id": "P2-1",
+    "severity": "P2",
+    "category": "Localization/Polish",
+    "title": "UI language is English although original target is Chinese App Store app 我的番茄",
+    "evidence": "Default tags and UI labels are English: Focus, Start Focus, Settings, Stats etc. This weakens clone fidelity for Chinese users.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T01:47:00+08:00",
+    "fix_summary": "Core default tags and primary timer/settings labels localized to Chinese for 我的番茄 baseline fit."
+  },
+  {
+    "id": "P2-2",
+    "severity": "P2",
+    "category": "UX",
+    "title": "Mode dots imply Focus/Short/Long/Custom modes but are not interactive",
+    "evidence": "TimerPage renders four mode dots from ['Focus','Short','Long','Custom'] without labels/click handlers; users see modes that cannot be selected.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T08:18:48+08:00",
+    "fix_summary": "Removed the misleading non-interactive mode dots and replaced them with a truthful completion hint."
+  },
+  {
+    "id": "P0-2",
+    "severity": "P0",
+    "category": "Interaction",
+    "title": "Keyboard arrows were mapped to fixed pages instead of mirroring swipe gestures",
+    "evidence": "User correction: 左键=向左滑，右键=向右滑. AppShell previously mapped ArrowLeft/ArrowRight to fixed destinations; now uses current-page relative swipeLeft/swipeRight handlers.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T02:01:00+08:00"
+  },
+  {
+    "id": "P1-4",
+    "severity": "P1",
+    "category": "UX/Visual",
+    "title": "Settings page felt ugly and exposed unnecessary or unfinished controls",
+    "evidence": "User correction: 设置页面太丑，拖动控件不好看，很多设置没必要或压根用不了. Rewrote SettingsPage to native-like rows, toggles, and a small duration stepper; removed sliders and half-baked settings.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T02:01:00+08:00"
+  },
+  {
+    "id": "P1-5",
+    "severity": "P1",
+    "category": "Functional/Product parity",
+    "title": "完成后“开始休息”按钮不是真休息，只是 reset",
+    "evidence": "TimerPage completed state button labelled 开始休息 but handler called reset(); Store only had focus duration tick, no short/long break session state. User expects 我的番茄 style focus → rest cycle.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T08:18:48+08:00",
+    "fix_summary": "Added timer session state, activeDuration, startBreak(), short/long break selection by cycleCount/pomodoroCycle, break countdown UI label, and non-recording break completion reset."
+  },
+  {
+    "id": "P2-3",
+    "severity": "P2",
+    "category": "Localization/Polish",
+    "title": "统计、summary、标签弹窗、时间轴仍混杂英文文案",
+    "evidence": "Source audit found visible English copy: Stats, Week/Month/Year, Focus Trend, Today's Pomos, Abandoned, Total Pomos, Total Hours, Current Streak, By Tag, No data yet, Welcome, Tag name, Create Tag, min/m labels.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-21T08:18:48+08:00",
+    "fix_summary": "Localized stats tabs/cards/empty states, summary quote and metrics, tag selector labels/placeholders/buttons, calendar day/month labels and duration units."
+  },
+  {
+    "id": "P2-4",
+    "severity": "P2",
+    "category": "Localization/PWA",
+    "title": "设置步进器和标签新建弹窗仍残留英文单位与不原生的 duration slider",
+    "evidence": "SettingsPage Stepper default suffix was m; TagSelector new-tag form still used input[type=range] for duration. This conflicted with the user rule to avoid ugly sliders and prefer native-like steppers.",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-22T02:26:34+08:00",
+    "fix_summary": "Settings stepper now uses 分钟 suffix; TagSelector duration picker switched from range slider to +/- minute stepper with 5-minute increments."
+  },
+  {
+    "id": "P1-6",
+    "severity": "P1",
+    "category": "Functional/UX",
+    "title": "Summary 页“查看统计”是伪按钮文案，无法进入统计页",
+    "evidence": "src/components/SummaryPage.tsx 原本把 “查看统计 ›” 渲染成 span，没有 onClick；真实用户在 summary 页面无法直接进入统计页。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-22T14:35:16+08:00",
+    "fix_summary": "将 Summary 页右上角文案改为真实 button，调用 setPage(\"stats\") 进入统计页。"
+  },
+  {
+    "id": "P2-5",
+    "severity": "P2",
+    "category": "UX/Truthfulness",
+    "title": "设置页缺少当前标签可见性，默认专注时长会像是全局时长设置",
+    "evidence": "本轮源码与体验审计发现 SettingsPage 只有“默认专注时长”，虽然 subtitle 写了当前标签名，但设置页内没有明确的当前标签展示或切换提示，容易让用户误解为全局时长设置。对于按标签持久化时长的模型，这属于轻度真实度/可理解性问题。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-22T20:38:43+08:00",
+    "fix_summary": "设置页新增“标签”分组，明确展示当前标签，并提示回到首页点击标签胶囊进行切换或新建，避免把标签时长误解成全局设置。"
+  },
+  {
+    "id": "P2-6",
+    "severity": "P2",
+    "category": "PWA/Markup hygiene",
+    "title": "根页面重复注入 favicon / manifest 链接，增加 Safari/PWA 解析歧义",
+    "evidence": "live HTML contains manifest_count=2, icon_count=6, apple_count=3; src/app/layout.tsx 同时使用 Metadata API 和手写 <head> 图标/manifest 链接。虽然当前资源路径一致，但会制造重复 head 标记并增加后续 Safari/PWA 解析歧义。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-23T21:17:00+08:00",
+    "fix_summary": "移除 layout metadata 中重复的 manifest/icons 配置，保留 JSX <head> 作为单一图标来源；重新 build + pm2 restart 后线上 root HTML manifest/icon 链接数量恢复正常。"
+  },
+  {
+    "id": "P2-7",
+    "severity": "P2",
+    "category": "PWA/Caching",
+    "title": "Service worker 仍把首页 / 预缓存为静态资源，存在根 HTML 陈旧化风险",
+    "evidence": "public/sw.js 的 STATIC_ASSETS 仍包含 '/'，install 阶段会 cache.add('/')；虽然 fetch 分支对 HTML 已采用 network-first，但这条预缓存仍会把首页 HTML 放入安装缓存，和技能中“不要缓存 HTML，只缓存静态资源”的规则相冲突。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-26T19:17:00+08:00",
+    "fix_summary": "移除 service worker 对根 HTML 的预缓存与运行时 HTML cache.put，仅保留静态资源与 _next/static 资产缓存；重建并重启 PM2 后，本地与线上首页均返回 200，线上 sw.js 已不再包含根路径缓存逻辑。"
+  },
+  {
+    "id": "P1-7",
+    "severity": "P1",
+    "category": "Functional/Data correctness",
+    "title": "休息阶段长按停止会写入专注历史，污染统计和时间轴",
+    "evidence": "本轮源码审计确认 src/lib/store.ts 的 interrupt() 之前不区分 focus/shortBreak/longBreak，短休息或长休息长按停止时也会追加一条 PomodoroRecord。真实用户会在统计页、时间轴和 summary 里看到并不存在的“中断专注”记录。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-27T15:09:06+08:00",
+    "fix_summary": "interrupt() 现在对休息阶段直接回到 idle focus，不再写 history；同时 focus record 改为使用 activeDuration，避免 future 非默认时长会被 selectedTag.duration 错记。"
+  },
+  {
+    "id": "P1-8",
+    "severity": "P1",
+    "category": "PWA/Deployment",
+    "title": "Service worker 仍缓存根 app shell HTML，PWA/离线场景会继续吃旧首页",
+    "evidence": "本轮 live+source 复核发现 public/sw.js 在 cacheAppShell() 和 HTML fetch fallback 中仍有 APP_SHELL_URL 写入/读取逻辑，虽然不再把 '/' 放进 STATIC_ASSETS，但 SW 仍会把首页 HTML 存进缓存，和“不要缓存 HTML”的部署规则相冲突。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-27T15:09:06+08:00",
+    "fix_summary": "SW 现在只缓存静态资源和 /offline.html；live sw.js 已验证不存在 cache.put(APP_SHELL_URL) 与 cache.match(APP_SHELL_URL)，同时保留 CACHE_APP_SHELL 消息用于抓取 _next/static 资源。"
+  },
+  {
+    "id": "P2-8",
+    "severity": "P2",
+    "category": "PWA/Markup hygiene",
+    "title": "根页面 head 仍有重复 Apple/PWA 标记，旧报告“已恢复正常”不成立",
+    "evidence": "本轮修复前，src/app/layout.tsx 仍同时输出 timestamped + stable apple-touch-icon / mask-icon，并通过 metadata + 手写 head 重复输出 Apple web app meta。线上 root head 的精确统计是 rel_apple_touch_icon=2、rel_mask_icon=2、Apple web-app meta 也重复。",
+    "status": "fixed_in_worktree",
+    "fixed_at": "2026-05-27T15:09:06+08:00",
+    "fix_summary": "保留单一稳定 apple-touch-icon 与 mask-icon，移除多余手写 Apple meta 和 metadata.other；线上 root head 现已验证 rel_manifest=1、rel_apple_touch_icon=1、rel_mask_icon=1，Apple web-app meta 各 1。"
+  },
+  {
+    "id": "P0-3",
+    "severity": "P0",
+    "category": "PWA/Startup",
+    "title": "联网情况下仍卡在“正在从本地缓存启动”的 SSR 启动壳",
+    "evidence": "用户真机反馈：连着网也一直停在本地缓存启动页。源码复核发现 ClientApp 额外等待 requestAnimationFrame 设置 mounted；同时旧构建的 _next/static chunk 在重建前返回 500，会造成客户端接管失败，SSR shell 无法被覆盖。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-27T23:21:17+08:00",
+    "fix_summary": "ClientApp 现在立即渲染 AppShell，不再用 mounted gate；重新 rm -rf .next && npm run build && pm2 restart 后，本地/线上首页 200，HTML 引用的所有 _next/static chunk 均返回 200。"
+  },
+  {
+    "id": "P0-4",
+    "severity": "P0",
+    "category": "PWA/Offline",
+    "title": "离线 PWA 完全不可用，只有离线提示/白屏而非可用计时器",
+    "evidence": "上一轮为了避免陈旧 HTML 误把根 app shell 从 SW 缓存中删除，导致离线 navigation fallback 只能返回 /offline.html，不能启动完整本地 App。用户明确反馈 PWA 离线完全不可用。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-27T23:21:17+08:00",
+    "fix_summary": "SW 升级到 focuspomo-v1779372627-pwa7：online navigation 仍 network-first；安装/ready 消息会缓存当前 APP_SHELL_URL 及其 _next/static chunk；离线 navigation 优先返回 cached APP_SHELL_URL，再 fallback 到 /offline.html。"
+  },
+  {
+    "id": "P1-9",
+    "severity": "P1",
+    "category": "UX/Visual",
+    "title": "主页面上滑 Summary 页 UI 简陋，不像原生 bottom-sheet 复盘体验",
+    "evidence": "用户反馈主页面上滑页面 UI 仍很简陋。源码中的 SummaryPage 主要是裸标题、三列数字和番茄网格，没有行动导向、Top-3 待办承接或底部抽屉质感。Claude 审计建议把它当作 bottom sheet：peek/summary/detail 语义、重点数字、backdrop/rounded sheet、空间必须承载行动。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-27T23:21:17+08:00",
+    "fix_summary": "SummaryPage 重写为行动复盘页：顶部 handle、玻璃卡片、今日专注/番茄/连续天、智能 Top-3 待办入口、重要紧急标签、月度复利番茄网格，并保留查看统计与回到计时。"
+  }
+]

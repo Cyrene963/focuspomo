@@ -1,4 +1,4 @@
-const CACHE_NAME = 'focuspomo-v1779372627-pwa5';
+const CACHE_NAME = 'focuspomo-v1779372627-pwa7';
 const APP_SHELL_URL = '/';
 
 const STATIC_ASSETS = [
@@ -13,25 +13,43 @@ const STATIC_ASSETS = [
   '/apple-touch-icon.png',
 ];
 
-const OFFLINE_HTML = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FocusPomo Offline</title><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#FFF8F0;color:#1D1D1F;padding:24px"><h1>FocusPomo 离线</h1><p>已离线。第一次安装后请在线打开一次完成缓存；之后会尽量像本地 App 一样打开已缓存的计时器和本地数据。</p><button onclick="location.reload()" style="border:0;border-radius:18px;background:#2D2625;color:#fff;padding:12px 18px;font-weight:700">重试</button></body>';
+const OFFLINE_HTML = `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#FFF8F0"><title>FocusPomo Offline</title><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Nunito',sans-serif;background:#FFF8F0;color:#2D2625;min-height:100vh;display:flex;align-items:center;justify-content:center"><main style="width:min(420px,calc(100vw - 40px));padding:28px;border-radius:32px;background:rgba(255,255,255,.72);box-shadow:0 24px 80px rgba(45,38,37,.14);text-align:center"><img src="/icon-1779372627-192.png" width="72" height="72" style="border-radius:24px;box-shadow:0 12px 36px rgba(232,100,78,.2)" alt="FocusPomo"><h1 style="font-size:28px;margin:18px 0 8px">FocusPomo 离线模式</h1><p style="font-size:15px;line-height:1.7;margin:0 0 18px;color:#6B5B57">当前没有网络。如果你已经在线打开过最新版，计时器会直接从本地缓存启动；如果这里只显示离线卡片，说明旧版 iPad PWA 还没完成新版缓存，请联网打开一次后再断网测试。</p><button onclick="location.reload()" style="border:0;border-radius:18px;background:#2D2625;color:#fff;padding:13px 20px;font-weight:800;font-size:15px">重新尝试打开</button></main></body></html>`;
+
+function extractNextStaticAssets(html) {
+  const urls = [];
+  const attrPattern = /(?:src|href)=\"([^\"]*\/_next\/static\/[^\"]+)\"/g;
+  const escapedPattern = /\/_next\/static\/[^\"'\s<>),]+/g;
+  for (const match of html.matchAll(attrPattern)) urls.push(match[1]);
+  for (const match of html.matchAll(escapedPattern)) urls.push(match[0].replace(/\\+$/, ''));
+  return Array.from(new Set(urls.map((url) => new URL(url, self.location.origin).pathname)));
+}
 
 async function cacheAppShell(cache) {
   try {
     const response = await fetch(APP_SHELL_URL, { cache: 'reload' });
-    if (!response || !response.ok) return;
+    if (!response || !response.ok) return false;
+    const html = await response.clone().text();
     await cache.put(APP_SHELL_URL, response.clone());
-    const html = await response.text();
-    const assetUrls = Array.from(html.matchAll(/(?:src|href)="([^\"]*\/_next\/static\/[^\"]+)"/g))
-      .map((m) => new URL(m[1], self.location.origin).pathname)
-      .filter((v, i, a) => a.indexOf(v) === i);
-    await Promise.allSettled(assetUrls.map((asset) => cache.add(asset)));
-  } catch (_) {}
+    await cache.put('/offline.html', new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+    const assetUrls = extractNextStaticAssets(html);
+    await Promise.allSettled(assetUrls.map(async (asset) => {
+      const assetResponse = await fetch(asset, { cache: 'reload' });
+      if (assetResponse && assetResponse.ok) await cache.put(asset, assetResponse);
+    }));
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      await Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset)));
+      await Promise.allSettled(STATIC_ASSETS.map(async (asset) => {
+        const response = await fetch(asset, { cache: 'reload' });
+        if (response && response.ok) await cache.put(asset, response);
+      }));
+      await cache.put('/offline.html', new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
       await cacheAppShell(cache);
     })
   );
@@ -39,12 +57,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    await self.clients.claim();
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+  })());
 });
 
 self.addEventListener('message', (event) => {
@@ -63,16 +80,10 @@ self.addEventListener('fetch', (event) => {
   if (isHTML) {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(APP_SHELL_URL, clone));
-          }
-          return response;
-        })
+        .then((response) => response)
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          return (await cache.match(APP_SHELL_URL)) || new Response(OFFLINE_HTML, {
+          return (await cache.match(APP_SHELL_URL)) || (await cache.match('/offline.html')) || new Response(OFFLINE_HTML, {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
         })
@@ -95,5 +106,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  event.respondWith(fetch(event.request).catch(async () => (await caches.match(event.request)) || (await caches.match(url.pathname)) || Response.error()));
 });

@@ -118,7 +118,7 @@ export default function StatsPage() {
         {/* FOCUS TREND */}
         <div style={cardStyle}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", marginBottom: 6, letterSpacing: 0.5 }}>专注趋势</div>
-          <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)", marginBottom: 4 }}>{Math.floor(totalMin/60)}h {totalMin%60}m</div>
+          <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)", marginBottom: 4 }}>{Math.floor(totalMin/60)}小时 {totalMin%60}分</div>
           <div style={{ fontSize: 12, color: "var(--text-sec)", marginBottom: 28 }}>{PERIOD_LABELS[period]}</div>
           {/* Bar chart */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
@@ -171,7 +171,7 @@ export default function StatsPage() {
           </div>
           <div style={cardStyle}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>累计小时</div>
-            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{Math.round(history.reduce((s, r) => s + r.actualDuration, 0) / 3600)}h</div>
+            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{Math.round(history.reduce((s, r) => s + r.actualDuration, 0) / 3600)}小时</div>
           </div>
         </div>
 

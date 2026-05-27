@@ -25,9 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href={`/favicon-${TS}.ico`} type="image/x-icon" />
         <link rel="icon" href={`/favicon-${TS}-32.png`} type="image/png" sizes="32x32" />
         <link rel="icon" href={`/favicon-${TS}-16.png`} type="image/png" sizes="16x16" />
-        <link rel="apple-touch-icon" href={`/icon-${TS}-apple.png`} sizes="180x180" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-        <link rel="mask-icon" href={`/safari-pinned-tab-${TS}.svg`} color="#E8644E" />
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#E8644E" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#FFF8F0" />
@@ -42,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(reg=>{if(reg.active){reg.active.postMessage({type:'CACHE_APP_SHELL'})}}).catch(()=>{})})}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready).then(reg=>{if(reg.active){reg.active.postMessage({type:'CACHE_APP_SHELL'})}}).catch(()=>{})})}` }} />
       </body>
     </html>
   );

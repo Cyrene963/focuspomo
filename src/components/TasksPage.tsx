@@ -194,7 +194,10 @@ export default function TasksPage() {
   const { tasks, smartPlanToday, clearCompletedTasks } = useStore();
   const active = tasks.filter(t => !t.completed);
   const completed = tasks.filter(t => t.completed);
-  const today = active.filter(t => t.plannedToday).slice(0, 3);
+  const today = [...tasks]
+    .filter(t => t.plannedToday)
+    .sort((a, b) => Number(a.completed) - Number(b.completed) || b.updatedAt - a.updatedAt)
+    .slice(0, 3);
   const doneToday = tasks.filter(t => t.completedAt && t.completedAt >= todayStart()).length;
   const weekDone = tasks.filter(t => t.completedAt && t.completedAt >= startOfWeek(new Date())).length;
   const progress = today.length ? today.filter(t => t.completed).length / today.length : Math.min(1, doneToday / 3);

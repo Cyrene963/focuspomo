@@ -188,7 +188,7 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
   complete: () => {
-    const { selectedTag, startTime, history, cycleCount, session } = get();
+    const { selectedTag, startTime, history, cycleCount, session, activeDuration } = get();
     if (session !== 'focus') {
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
       return;
@@ -199,9 +199,9 @@ export const useStore = create<Store>((set, get) => ({
       tagId: selectedTag.id,
       tagName: selectedTag.name,
       tagColor: selectedTag.color,
-      plannedDuration: selectedTag.duration,
-      actualDuration: startTime ? Math.round((now - startTime) / 1000) : selectedTag.duration,
-      startTime: startTime || now - selectedTag.duration * 1000,
+      plannedDuration: activeDuration,
+      actualDuration: startTime ? Math.round((now - startTime) / 1000) : activeDuration,
+      startTime: startTime || now - activeDuration * 1000,
       endTime: now,
       completed: true,
     };
@@ -212,7 +212,11 @@ export const useStore = create<Store>((set, get) => ({
     set({ state: 'completed', session: 'focus', remaining: 0, history: h, cycleCount: nextCycleCount });
   },
   interrupt: () => {
-    const { selectedTag, startTime, history } = get();
+    const { selectedTag, startTime, history, session, activeDuration } = get();
+    if (session !== 'focus') {
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
+      return;
+    }
     const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     if (elapsed > 10) {
       const record: PomodoroRecord = {
@@ -220,9 +224,9 @@ export const useStore = create<Store>((set, get) => ({
         tagId: selectedTag.id,
         tagName: selectedTag.name,
         tagColor: selectedTag.color,
-        plannedDuration: selectedTag.duration,
+        plannedDuration: activeDuration,
         actualDuration: elapsed,
-        startTime: startTime || Date.now() - elapsed * 1000,
+        startTime: startTime || Date.now() - Math.min(elapsed, activeDuration) * 1000,
         endTime: Date.now(),
         completed: false,
       };
@@ -288,7 +292,7 @@ export const useStore = create<Store>((set, get) => ({
     const tasks = get().tasks.map(t => {
       if (t.id !== id) return t;
       const done = !t.completed;
-      return { ...t, completed: done, plannedToday: done ? false : t.plannedToday, completedAt: done ? Date.now() : undefined, updatedAt: Date.now() };
+      return { ...t, completed: done, plannedToday: t.plannedToday, completedAt: done ? Date.now() : undefined, updatedAt: Date.now() };
     });
     saveJSON('fp-tasks', tasks);
     set({ tasks });
