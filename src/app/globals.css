@@ -43,7 +43,8 @@ html.dark {
 /* ===== RESET ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #__next {
-  height: 100dvh; height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   overscroll-behavior: none;
@@ -56,6 +57,15 @@ html, body, #__next {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.4s ease, color 0.4s ease;
 }
+
+@supports (height: 100svh) {
+  html, body, #__next { height: 100svh; }
+}
+
+@supports (height: 100dvh) {
+  html, body, #__next { height: var(--app-height, 100dvh); }
+}
+
 ::-webkit-scrollbar { display: none; }
 
 /* ===== TYPOGRAPHY ===== */

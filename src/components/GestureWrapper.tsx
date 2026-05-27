@@ -24,10 +24,21 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
   const startY = useRef(0);
   const startTime = useRef(0);
 
+  const startedInsideScrollable = useRef(false);
+
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     startX.current = e.clientX;
     startY.current = e.clientY;
     startTime.current = Date.now();
+    let el = e.target as HTMLElement | null;
+    startedInsideScrollable.current = false;
+    while (el && el !== e.currentTarget) {
+      if (el.scrollHeight > el.clientHeight + 2) {
+        startedInsideScrollable.current = el.scrollTop > 2;
+        break;
+      }
+      el = el.parentElement;
+    }
   }, []);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
@@ -41,6 +52,9 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
       if (dx < 0 && onSwipeLeft) onSwipeLeft();
       if (dx > 0 && onSwipeRight) onSwipeRight();
     } else if (vy > vx && vy > 80) {
+      // Let normal page scrolling win once the user started inside a scrolled panel.
+      // At the top of Summary, a downward swipe is the explicit "close sheet" gesture.
+      if (startedInsideScrollable.current) return;
       if (dy > 0 && onSwipeDown) onSwipeDown();
       if (dy < 0 && onSwipeUp) onSwipeUp();
     }
@@ -54,7 +68,7 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
       transition={spring}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
-      style={{ width: "100%", height: "100%", overflow: "hidden" }}
+      style={{ width: "100%", height: "100%", overflow: "hidden", touchAction: "pan-y" }}
     >
       {children}
     </motion.div>

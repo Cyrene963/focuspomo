@@ -25,7 +25,11 @@
     "ClientApp hydration gate removal",
     "service worker app-shell offline fallback verification",
     "SummaryPage upward-swipe UI redesign",
-    "Claude AnyRouter second-opinion review"
+    "Claude AnyRouter second-opinion review",
+    "Summary vertical gesture direction regression",
+    "iPad Safari toolbar visible viewport regression",
+    "visualViewport-driven app height",
+    "scrollable Summary gesture conflict avoidance"
   ],
   "next_steps": [
     "manual focus time entry",
@@ -33,7 +37,7 @@
     "visual parity against App Store screenshots",
     "real mobile/iOS PWA install/offline test"
   ],
-  "updated_at": "2026-05-27T23:21:17+08:00",
+  "updated_at": "2026-05-27T23:58:03+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -68,16 +72,24 @@
     ],
     "code_changes_this_round": true,
     "fixed_this_round": [
-      "P0-3",
-      "P0-4",
-      "P1-9"
+      "P0-5",
+      "P0-6"
     ],
     "git_head": "97f9a31",
-    "notes": "User-reported online shell-stuck/offline-PWA regression was treated as P0. ClientApp now renders AppShell immediately. SW v7 caches a real app shell for offline navigation while keeping online navigation network-first. Summary upward-swipe page redesigned into action-oriented review/Top-3 sheet. Build, PM2 restart, public 200, live sw.js pwa7, and all local _next/static assets verified.",
+    "notes": "User-reported Summary down-swipe and iPad toolbar layout regressions fixed. Gesture directions corrected to up=open Summary/down=return timer. App height follows visualViewport to avoid iPad Safari toolbar squeeze. Build/typecheck/deploy/public asset gates passed.",
     "service_worker_offline_app_shell_fallback": true,
     "clientapp_mounted_gate_removed": true,
     "local_next_static_assets_all_200": true,
-    "public_next_static_assets_all_200": true
+    "public_next_static_assets_all_200": true,
+    "summary_swipe_down_returns_timer": true,
+    "timer_swipe_up_opens_summary": true,
+    "keyboard_arrow_up_opens_summary_arrow_down_returns_timer": true,
+    "visual_viewport_app_height_enabled": true,
+    "summary_scroll_uses_webkit_overflow_touch": true,
+    "build_passed": true,
+    "typescript_no_emit_passed": true,
+    "local_http_200": true,
+    "public_http_200": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
@@ -85,5 +97,5 @@
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "Closed P0 startup-shell regression, P0 offline-PWA regression, and P1 summary UI crude issue; server-side deployment verifies, real installed iPad PWA may still need one reopen/reinstall to pick up the new service worker."
+  "last_verification_note": "Closed P0-5 and P0-6; still needs real iPad confirmation because server-side can only verify deployed code and asset/runtime markers, not physical toolbar behavior."
 }

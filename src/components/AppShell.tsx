@@ -35,11 +35,31 @@ export default function AppShell() {
     if (next) go(next);
   }, [page, go]);
 
-  // Keyboard mirrors gestures exactly: ← = swipe left, → = swipe right.
+  // Keep the app fitted to iPad Safari's *visible* viewport when the browser toolbar is shown.
+  // 100vh is too tall on iPad Safari and makes the whole app look vertically squeezed.
+  useEffect(() => {
+    const applyViewportHeight = () => {
+      const h = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);
+    };
+    applyViewportHeight();
+    window.visualViewport?.addEventListener("resize", applyViewportHeight);
+    window.visualViewport?.addEventListener("scroll", applyViewportHeight);
+    window.addEventListener("resize", applyViewportHeight);
+    window.addEventListener("orientationchange", applyViewportHeight);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", applyViewportHeight);
+      window.visualViewport?.removeEventListener("scroll", applyViewportHeight);
+      window.removeEventListener("resize", applyViewportHeight);
+      window.removeEventListener("orientationchange", applyViewportHeight);
+    };
+  }, []);
+
+  // Keyboard mirrors gestures exactly: ↑ = open summary, ↓/Esc = return to timer.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") { e.preventDefault(); go("summary"); }
-      if (e.key === "ArrowUp") { e.preventDefault(); go("timer"); }
+      if (e.key === "ArrowUp") { e.preventDefault(); go("summary"); }
+      if (e.key === "ArrowDown") { e.preventDefault(); go("timer"); }
       if (e.key === "ArrowLeft") { e.preventDefault(); swipeLeft(); }
       if (e.key === "ArrowRight") { e.preventDefault(); swipeRight(); }
       if (e.key === "Escape") { e.preventDefault(); go("timer"); }
@@ -49,13 +69,13 @@ export default function AppShell() {
   }, [go, swipeLeft, swipeRight]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
+    <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
       <AnimatePresence mode="wait">
         {page === "timer" && (
           <GestureWrapper key="timer" enterX={0} enterY={0}
             onSwipeLeft={swipeLeft}
             onSwipeRight={swipeRight}
-            onSwipeDown={() => go("summary")}
+            onSwipeUp={() => go("summary")}
           >
             <TimerPage />
           </GestureWrapper>
@@ -71,7 +91,7 @@ export default function AppShell() {
           <GestureWrapper key="tasks" enterX={-60} enterY={0}
             onSwipeLeft={swipeLeft}
             onSwipeRight={swipeRight}
-            onSwipeDown={() => go("summary")}
+            onSwipeUp={() => go("summary")}
           >
             <TasksPage />
           </GestureWrapper>
@@ -93,7 +113,7 @@ export default function AppShell() {
         )}
         {page === "summary" && (
           <GestureWrapper key="summary" enterX={0} enterY={60}
-            onSwipeUp={() => go("timer")}
+            onSwipeDown={() => go("timer")}
           >
             <SummaryPage />
           </GestureWrapper>

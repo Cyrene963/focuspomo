@@ -206,5 +206,25 @@
     "status": "fixed_deployed",
     "fixed_at": "2026-05-27T23:21:17+08:00",
     "fix_summary": "SummaryPage 重写为行动复盘页：顶部 handle、玻璃卡片、今日专注/番茄/连续天、智能 Top-3 待办入口、重要紧急标签、月度复利番茄网格，并保留查看统计与回到计时。"
+  },
+  {
+    "id": "P0-5",
+    "severity": "P0",
+    "category": "Gesture/Navigation",
+    "title": "Summary 页下滑返回计时器不可用",
+    "evidence": "用户真机反馈：上滑 Summary 页面后，下滑根本用不了。源码复核发现 AppShell 把 timer/tasks 的进入 Summary 绑定到 onSwipeDown，把 Summary 返回绑定到 onSwipeUp，方向与用户心智和页面文案相反。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-27T23:58:03+08:00",
+    "fix_summary": "改为 timer/tasks 上滑进入 Summary；Summary 下滑返回 timer；键盘也同步为 ↑ 打开 Summary、↓/Esc 返回 timer。GestureWrapper 允许纵向滚动优先，避免滚动面板内手势误触。"
+  },
+  {
+    "id": "P0-6",
+    "severity": "P0",
+    "category": "iPad Safari/Layout",
+    "title": "iPad Safari 未隐藏 toolbar 时整页响应式布局被压扁",
+    "evidence": "用户真机反馈：iPad 上如果没有隐藏 Safari toolbar，整个布局像被压扁。源码中 html/body 使用 100vh/100dvh 且 AppShell fixed inset:0，没有按 visualViewport 可见高度修正。iPad Safari toolbar 显示/隐藏时 100vh 与真实可见区不一致。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-27T23:58:03+08:00",
+    "fix_summary": "AppShell 监听 visualViewport resize/scroll/orientationchange，将 --app-height 设置为可见视口高度；全局 CSS 和 SSR shell 使用 var(--app-height,100dvh)，并保留 100svh/100dvh fallback。"
   }
 ]

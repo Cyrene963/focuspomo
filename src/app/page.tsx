@@ -5,7 +5,7 @@ export default function Page() {
     <main
       id="focuspomo-root-shell"
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--app-height, 100dvh)",
         width: "100vw",
         background: "#F5F0EB",
         color: "#2D2625",

@@ -86,3 +86,32 @@
 2. 手动补录专注时间。
 3. 正计时模式。
 4. 继续对照 App Store 截图做逐屏视觉/动效还原。
+
+## 2026-05-27T23:58:03+08:00 真机反馈修复：Summary 下滑 + iPad Toolbar 压扁
+
+用户反馈：
+1. 上滑进入 Summary 后，下滑根本不能返回。
+2. iPad Safari 如果没有隐藏 toolbar，整套响应式布局像被压扁。
+
+根因：
+- 手势方向写反：上一版把进入 Summary 绑定成 onSwipeDown，把返回 timer 绑定成 onSwipeUp，和“上滑展开 / 下滑关闭”的 sheet 心智相反。
+- iPad Safari toolbar 显示时，100vh/fixed inset:0 不等于真实可见区域，导致网页在未隐藏 toolbar 状态下高度计算过大或被视觉压缩。
+
+修复：
+- src/components/AppShell.tsx：timer/tasks 上滑进入 Summary；summary 下滑返回 timer；键盘同步为 ↑ 打开 Summary、↓/Esc 返回 timer；监听 visualViewport.height 写入 --app-height。
+- src/components/GestureWrapper.tsx：加入 touchAction: pan-y；如果手势从已滚动面板内部开始，优先让原生滚动处理，减少 Summary 滚动与关闭手势冲突。
+- src/components/SummaryPage.tsx：使用 overflowY:auto、WebkitOverflowScrolling:touch、touchAction:pan-y；底部文案改为“下滑回计时”。
+- src/app/globals.css / src/app/page.tsx：height/minHeight 改用 var(--app-height, 100dvh)，保留 100svh/100dvh fallback。
+
+验证：
+- 源码断言：手势方向、keyboard mapping、visualViewport、Summary scroll markers 均存在。
+- npx tsc --noEmit：通过。
+- rm -rf .next && npm run build：通过。
+- pm2 restart focuspomo --update-env：通过。
+- 本地首页：200。
+- 线上首页：200。
+- 线上首页引用的 9 个 _next/static assets：全部 200。
+- live sw.js 仍为 focuspomo-v1779372627-pwa7，app-shell offline fallback 未回退。
+
+仍需真机确认：iPad Safari toolbar 行为只能由真实设备最终确认；服务器端与代码路径已部署验证。
+

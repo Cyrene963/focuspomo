@@ -71,8 +71,9 @@ export default function SummaryPage() {
 
   return (
     <div style={{
-      height: "100%", width: "100%", background: "var(--bg)",
-      overflow: "auto", padding: "max(18px, env(safe-area-inset-top)) 16px 124px",
+      height: "100%", minHeight: 0, width: "100%", background: "var(--bg)",
+      overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", touchAction: "pan-y",
+      padding: "max(18px, env(safe-area-inset-top)) 16px max(124px, calc(env(safe-area-inset-bottom) + 96px))",
       transition: "background 0.4s",
     }}>
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -178,7 +179,7 @@ export default function SummaryPage() {
         </section>
 
         <div style={{ textAlign: "center", color: "var(--text-sec)", fontSize: 12, lineHeight: 1.6, padding: "2px 12px 0" }}>
-          上滑看复盘，下滑回计时。这里不是多一个页面，而是每天防止滑向长视频的“行动刹车”。
+          下滑回计时。这里不是多一个页面，而是每天防止滑向长视频的“行动刹车”。
         </div>
       </div>
     </div>
