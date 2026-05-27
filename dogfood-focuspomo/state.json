@@ -29,7 +29,11 @@
     "Summary vertical gesture direction regression",
     "iPad Safari toolbar visible viewport regression",
     "visualViewport-driven app height",
-    "scrollable Summary gesture conflict avoidance"
+    "scrollable Summary gesture conflict avoidance",
+    "dark mode visual palette audit",
+    "animation/native-feel performance audit",
+    "timer state transition spring tuning",
+    "physics canvas idle RAF elimination"
   ],
   "next_steps": [
     "manual focus time entry",
@@ -37,7 +41,7 @@
     "visual parity against App Store screenshots",
     "real mobile/iOS PWA install/offline test"
   ],
-  "updated_at": "2026-05-27T23:58:03+08:00",
+  "updated_at": "2026-05-28T00:11:58+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -72,11 +76,11 @@
     ],
     "code_changes_this_round": true,
     "fixed_this_round": [
-      "P0-5",
-      "P0-6"
+      "P1-10",
+      "P1-11"
     ],
     "git_head": "97f9a31",
-    "notes": "User-reported Summary down-swipe and iPad toolbar layout regressions fixed. Gesture directions corrected to up=open Summary/down=return timer. App height follows visualViewport to avoid iPad Safari toolbar squeeze. Build/typecheck/deploy/public asset gates passed.",
+    "notes": "Dark mode and motion-feel issues addressed. Current judgment: not only Safari/Web limitation; implementation had avoidable roughness (layoutId morph, idle RAF/physics runner, 500ms tick, cool black palette). Deployed and server-side verified; subjective smoothness still needs real iPad confirmation.",
     "service_worker_offline_app_shell_fallback": true,
     "clientapp_mounted_gate_removed": true,
     "local_next_static_assets_all_200": true,
@@ -89,7 +93,13 @@
     "build_passed": true,
     "typescript_no_emit_passed": true,
     "local_http_200": true,
-    "public_http_200": true
+    "public_http_200": true,
+    "dark_mode_warm_palette_enabled": true,
+    "timer_tick_interval_1000ms": true,
+    "timer_layoutid_morph_removed": true,
+    "tomato_physics_idle_runner_removed": true,
+    "compositor_helper_added": true,
+    "prefers_reduced_motion_supported": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
@@ -97,5 +107,5 @@
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "Closed P0-5 and P0-6; still needs real iPad confirmation because server-side can only verify deployed code and asset/runtime markers, not physical toolbar behavior."
+  "last_verification_note": "Closed dark palette and avoidable animation-performance issues. Real iPad subjective smoothness remains the final user-visible gate."
 }

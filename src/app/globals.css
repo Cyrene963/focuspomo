@@ -23,21 +23,23 @@
 }
 
 html.dark {
-  --bg: #0A0A0A;
-  --bg-card: #1C1C1E;
-  --bg-glass: rgba(28, 28, 30, 0.78);
-  --bg-glass-dark: rgba(0, 0, 0, 0.62);
-  --control-bg: rgba(255, 255, 255, 0.075);
-  --bg-overlay: rgba(0, 0, 0, 0.65);
-  --text: #FFFFFF;
-  --text-sec: #98989D;
-  --accent: #FF6B4A;
-  --accent-light: #1C1C1E;
-  --accent-mid: #2C2C2E;
-  --separator: rgba(255, 255, 255, 0.08);
-  --shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
-  --gradient-idle: radial-gradient(circle at 50% 30%, rgba(45,25,10,0.5) 0%, rgba(10,10,10,1) 80%);
-  --gradient-run: radial-gradient(circle at 50% 40%, rgba(60,30,12,0.6) 0%, rgba(10,10,10,1) 75%);
+  --bg: #17110E;
+  --bg-card: #241A16;
+  --bg-glass: rgba(43, 31, 26, 0.86);
+  --bg-glass-dark: rgba(17, 12, 10, 0.72);
+  --control-bg: rgba(255, 238, 224, 0.075);
+  --bg-overlay: rgba(12, 8, 6, 0.72);
+  --text: #FFF4EA;
+  --text-sec: #BFAEA4;
+  --accent: #FF8A63;
+  --accent-light: rgba(255, 138, 99, 0.16);
+  --accent-mid: rgba(255, 179, 122, 0.24);
+  --leaf: #65D48A;
+  --tomato-yellow: #FFD45E;
+  --separator: rgba(255, 238, 224, 0.105);
+  --shadow: 0 10px 34px rgba(0, 0, 0, 0.24);
+  --gradient-idle: radial-gradient(circle at 50% 18%, rgba(107,54,34,0.28) 0%, rgba(36,22,17,0.92) 44%, #17110E 82%), linear-gradient(180deg, #241711 0%, #17110E 100%);
+  --gradient-run: radial-gradient(circle at 50% 22%, rgba(255,138,99,0.22) 0%, rgba(78,37,24,0.82) 42%, #17110E 82%);
 }
 
 /* ===== RESET ===== */
@@ -81,6 +83,22 @@ html, body, #__next {
 /* ===== SPRING CURVES ===== */
 .spring-in { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .spring-out { transition: all 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045); }
+
+/* ===== PERFORMANCE / NATIVE-FEEL HELPERS ===== */
+.app-composited {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint size;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
 
 /* ===== BUTTON PRESS ===== */
 button { -webkit-tap-highlight-color: transparent; cursor: pointer; border: none; background: none; font-family: var(--font); }

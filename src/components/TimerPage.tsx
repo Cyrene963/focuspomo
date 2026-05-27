@@ -71,7 +71,7 @@ export default function TimerPage() {
   // Tick
   useEffect(() => {
     if (isActive) {
-      intervalRef.current = setInterval(() => tick(), 500);
+      intervalRef.current = setInterval(() => tick(), 1000);
     } else {
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     }
@@ -127,7 +127,7 @@ export default function TimerPage() {
 
   useEffect(() => () => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); }, []);
 
-  const panelTransition = { type: "spring" as const, stiffness: 190, damping: 24, mass: 0.86 };
+  const panelTransition = { type: "spring" as const, stiffness: 360, damping: 36, mass: 0.72 };
 
   // Atmospheric fluid gradient
   const bgColor = isActive
@@ -191,7 +191,7 @@ export default function TimerPage() {
               <div style={{ flex: 1, minHeight: 80 }} />
 
               {/* Timer circle */}
-              <motion.div layoutId="timer-face" style={{
+              <motion.div className="app-composited" style={{
                 width: "clamp(200px, 45vw, 380px)",
                 height: "clamp(200px, 45vw, 380px)",
                 borderRadius: "50%",
@@ -236,8 +236,8 @@ export default function TimerPage() {
                   width: "clamp(200px, 55vw, 260px)",
                   height: "clamp(52px, 9vh, 62px)",
                   borderRadius: 999,
-                  background: "#2D2625",
-                  color: "#FFFFFF",
+                  background: "var(--text)",
+                  color: "var(--bg)",
                   fontSize: "clamp(16px, 3vw, 20px)",
                   fontWeight: 600,
                   letterSpacing: "-0.01em",
@@ -259,8 +259,7 @@ export default function TimerPage() {
               style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <motion.span
-                layoutId="timer-face"
-                className="timer-number"
+                className="timer-number app-composited"
                 transition={panelTransition}
                 style={{
                   fontSize: "clamp(5rem, 15vw, 15rem)",
@@ -327,8 +326,8 @@ export default function TimerPage() {
               if (dx > 0) swipeRight();
               return;
             }
-            if (vy > vx && dy > 80) {
-              // Swipe DOWN — cancel hold, go to summary
+            if (vy > vx && dy < -80) {
+              // Swipe UP — cancel hold, go to summary
               if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
               setHoldActive(false);
               goSummary();
@@ -339,7 +338,7 @@ export default function TimerPage() {
           }}
           onPointerLeave={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          style={{ position: "absolute", inset: 0, zIndex: 20, touchAction: "none", cursor: "pointer", background: "transparent" }}
+          style={{ position: "absolute", inset: 0, zIndex: 20, touchAction: "none", cursor: "pointer", background: "transparent", transform: "translateZ(0)" }}
         >
           {/* Progress bar + text */}
           <div style={{

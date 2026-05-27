@@ -226,5 +226,25 @@
     "status": "fixed_deployed",
     "fixed_at": "2026-05-27T23:58:03+08:00",
     "fix_summary": "AppShell 监听 visualViewport resize/scroll/orientationchange，将 --app-height 设置为可见视口高度；全局 CSS 和 SSR shell 使用 var(--app-height,100dvh)，并保留 100svh/100dvh fallback。"
+  },
+  {
+    "id": "P1-10",
+    "severity": "P1",
+    "category": "Visual/DarkMode",
+    "title": "深色模式视觉廉价、生硬偏黑",
+    "evidence": "用户反馈深色模式真的好丑。源码审计发现 dark palette 是接近纯黑 #0A0A0A + 高对比白字，玻璃卡片/阴影仍偏 generic iOS dark，不符合 FocusPomo 番茄暖色品牌，也显得网页感重。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T00:11:58+08:00",
+    "fix_summary": "深色模式改为暖棕黑/番茄橙体系：#17110E 背景、#FFF4EA 文字、#FF8A63 accent，glass/gradient/separator/shadow 全部改为低亮暖色，设置页卡片边框/阴影使用变量。"
+  },
+  {
+    "id": "P1-11",
+    "severity": "P1",
+    "category": "Motion/Performance",
+    "title": "动画不够原生丝滑，部分来自实现而非 Web/Safari 天花板",
+    "evidence": "用户反馈动画不像原生 App 丝滑。源码审计发现 TimerPage 500ms tick、Framer layoutId 跨状态 morph、Matter.js Runner + canvas RAF 常驻、页面切换 spring 偏慢且多处 backdrop/filter/box-shadow 叠加。Safari/PWA 有天花板，但当前实现仍有明显可优化点。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T00:11:58+08:00",
+    "fix_summary": "计时 tick 改为 1000ms；移除 timer-face layoutId 跨状态布局 morph；页面 spring 调快为 360/36/0.72；GestureWrapper 加 compositor class/layout=false；TomatoPhysics 改为触发后临时 Engine.update+RAF，静止后停止，不再 idle 常驻 Runner/RAF；加入 prefers-reduced-motion fallback。"
   }
 ]

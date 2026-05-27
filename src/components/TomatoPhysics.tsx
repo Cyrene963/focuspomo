@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Matter from "matter-js";
 
-const { Engine, Runner, Bodies, Composite } = Matter;
+const { Engine, Bodies, Composite } = Matter;
 
 interface TomatoPhysicsProps {
   trigger: { completed: boolean; durationSeconds: number } | null;
@@ -22,7 +22,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export default function TomatoPhysics({ trigger }: TomatoPhysicsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
-  const runnerRef = useRef<Matter.Runner | null>(null);
   const bodiesRef = useRef<Matter.Body[]>([]);
   const [redImg, setRedImg] = useState<HTMLImageElement | null>(null);
   const [yellowImg, setYellowImg] = useState<HTMLImageElement | null>(null);
@@ -52,34 +51,39 @@ export default function TomatoPhysics({ trigger }: TomatoPhysicsProps) {
     const wallR = Bodies.rectangle(w + 20, h / 2, 40, h * 2, { isStatic: true });
     Composite.add(engine.world, [ground, wallL, wallR]);
 
-    const runner = Runner.create();
-    Runner.run(runner, engine);
-    runnerRef.current = runner;
+    return () => {
+      Engine.clear(engine);
+      bodiesRef.current = [];
+    };
+  }, []);
 
-    let animFrame: number;
-    const ctx = canvas.getContext("2d")!;
-
+  useEffect(() => {
+    if (!canvasRef.current || bodiesRef.current.length === 0) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const engine = engineRef.current;
+    if (!ctx || !engine) return;
+    let animFrame = 0;
+    let idleFrames = 0;
     const draw = () => {
-      ctx.clearRect(0, 0, w, h);
+      Matter.Engine.update(engine, 1000 / 60);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let moving = false;
       for (const body of bodiesRef.current) {
         const pos = body.position;
         const angle = body.angle;
         const radius = (body as any).circleRadius || 22;
         const isCompleted = (body as any).isCompleted !== false;
         const img = isCompleted ? redImg : yellowImg;
-
+        if (Math.abs(body.velocity.x) > 0.06 || Math.abs(body.velocity.y) > 0.06 || Math.abs(body.angularVelocity) > 0.004) moving = true;
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
-
-        // SVG aspect ratio: 107/125 ≈ 0.856
         const drawW = radius * 2;
         const drawH = radius * 2 * (125 / 107);
-
         if (img) {
           ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         } else {
-          // Fallback: colored circle
           ctx.beginPath();
           ctx.arc(0, 0, radius, 0, Math.PI * 2);
           ctx.fillStyle = isCompleted ? "#ff9029" : "#ffd83f";
@@ -87,16 +91,12 @@ export default function TomatoPhysics({ trigger }: TomatoPhysicsProps) {
         }
         ctx.restore();
       }
-      animFrame = requestAnimationFrame(draw);
+      idleFrames = moving ? 0 : idleFrames + 1;
+      if (idleFrames < 90) animFrame = requestAnimationFrame(draw);
     };
     animFrame = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(animFrame);
-      Runner.stop(runner);
-      Engine.clear(engine);
-    };
-  }, [redImg, yellowImg]);
+    return () => cancelAnimationFrame(animFrame);
+  }, [redImg, yellowImg, trigger]);
 
   // Gyroscope
   useEffect(() => {

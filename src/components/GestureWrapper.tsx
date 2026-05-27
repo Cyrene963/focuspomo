@@ -3,7 +3,7 @@
 import { useRef, useCallback, type ReactNode } from "react";
 import { motion } from "framer-motion";
 
-const spring = { type: "spring" as const, stiffness: 280, damping: 28, mass: 0.9 };
+const spring = { type: "spring" as const, stiffness: 360, damping: 34, mass: 0.72 };
 
 interface GestureWrapperProps {
   children: ReactNode;
@@ -62,10 +62,12 @@ export default function GestureWrapper({ children, onSwipeLeft, onSwipeRight, on
 
   return (
     <motion.div
+      className="app-composited"
       initial={false}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: -enterX, y: -enterY }}
       transition={spring}
+      layout={false}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       style={{ width: "100%", height: "100%", overflow: "hidden", touchAction: "pan-y" }}

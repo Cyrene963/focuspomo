@@ -52,8 +52,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         borderRadius: 22,
         overflow: "hidden",
         background: "var(--bg-glass)",
-        border: "1px solid rgba(0,0,0,0.035)",
-        boxShadow: "0 8px 24px rgba(40,24,12,0.045)",
+        border: "1px solid var(--separator)",
+        boxShadow: "var(--shadow)",
       }}>{children}</div>
     </section>
   );

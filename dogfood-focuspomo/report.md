@@ -115,3 +115,46 @@
 
 仍需真机确认：iPad Safari toolbar 行为只能由真实设备最终确认；服务器端与代码路径已部署验证。
 
+## 2026-05-28T00:11:58+08:00 深色模式与动画丝滑度修复
+
+用户反馈：
+1. 深色模式很丑。
+2. 动画不像原生 App 那么丝滑，怀疑是网页限制、Safari 问题，还是实现问题。
+
+判断：
+- 不是单纯 Web/Safari 天花板。PWA/Safari 确实比原生 App 更容易掉帧，尤其 backdrop-filter、fixed 全屏、canvas、Framer layout 动画叠加时；但本项目当前实现也有明显问题。
+- 深色模式主要是我们自己的设计问题：接近纯黑背景 + 白字 + generic iOS dark card，和番茄暖色品牌不协调。
+- 动画主要是我们自己的实现问题占较大比例：500ms tick、layoutId 跨状态 morph、Matter.js Runner + canvas RAF 常驻、spring 偏慢、玻璃/阴影叠加，都会让 iPad Safari 更像网页而不是原生。
+
+修复：
+- `src/app/globals.css`
+  - 深色模式改成暖棕黑/番茄橙体系：`#17110E` 背景、`#FFF4EA` 文字、`#FF8A63` accent。
+  - dark gradients、glass、separator、shadow 全部改成暖色低亮方案。
+  - 新增 `.app-composited`，并加入 `prefers-reduced-motion` fallback。
+- `src/components/TimerPage.tsx`
+  - tick 从 500ms 改为 1000ms，减少无意义全局 store 更新。
+  - 移除 `layoutId="timer-face"` 跨状态 morph，避免 Framer 做昂贵布局测量/重排。
+  - spring 调快：`stiffness 360 / damping 36 / mass 0.72`。
+  - 开始按钮用 `var(--text)/var(--bg)`，深色模式不再硬编码黑白。
+  - 运行中垂直手势同步修正为上滑进入 Summary。
+- `src/components/GestureWrapper.tsx`
+  - spring 调快。
+  - 增加 compositor class 和 `layout={false}`，降低页面切换布局动画负担。
+- `src/components/TomatoPhysics.tsx`
+  - 不再长期运行 Matter Runner + requestAnimationFrame。
+  - 只有掉番茄触发后才临时 `Engine.update + RAF`，静止约 90 帧后停止。
+- `src/components/SettingsPage.tsx`
+  - section card 边框/阴影改用 theme variables，深色模式不再用浅色硬编码阴影。
+
+验证：
+- 源码断言：dark palette、compositor helper、reduced-motion、1000ms tick、layoutId 移除、physics idle runner 移除均存在。
+- `npx tsc --noEmit`：通过。
+- `rm -rf .next && npm run build`：通过。
+- `pm2 restart focuspomo --update-env`：通过。
+- 本地首页：200。
+- 线上首页：200。
+- 线上 9 个 `_next/static` assets：全部 200。
+- live `sw.js` 仍为 `focuspomo-v1779372627-pwa7`，PWA app shell 未回退。
+
+后续真机判断：如果 iPad 上仍不够丝滑，下一步应继续减少 `backdrop-filter` 和大面积 box-shadow，并把页面切换改成更接近 native UINavigation 的 transform-only transition；但本轮已经先去掉了最明显的实现型卡顿源。
+
