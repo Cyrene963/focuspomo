@@ -94,3 +94,31 @@
 - 本地首页：200。
 - 线上首页：200。
 - 线上首页引用的 9 个 `_next/static` assets：全部 200。
+
+## 2026-05-28T18:31:06+08:00 Google 同步 + Calendar + 今晚容量规划
+
+新增：
+- Google OAuth 登录入口：`/api/auth/google`，scope 包含 `openid email profile` 与 `calendar.events`。
+- 服务端独立 `focuspomo` PostgreSQL 用户/库，表：`focuspomo_users`、`focuspomo_sessions`、`focuspomo_sync_snapshots`、`focuspomo_calendar_events`。
+- 设置页新增 Google 云同步面板：登录、备份本机、恢复云端、开启/触发 Calendar 同步。
+- Calendar 同步只写入已完成且真实存在的番茄记录；使用本地 `record.id` 去重，避免重复日历块。
+- 全局后台同步 agent：Calendar 已开启时，完成新番茄后自动尝试同步。
+- 任务页新增“今晚还剩多少番茄？”容量面板：按当前专注时长 + 短休息估算到 24:00 可用番茄数，并和今日 Top 3 剩余估算番茄数对比。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `rm -rf .next && npm run build`：通过，API routes 进入 production bundle。
+- `pm2 restart focuspomo --update-env`：成功。
+- 本地 `/api/me`：200，未登录返回 `user:null`。
+- 本地 `/api/sync`：未登录 401，不再 500。
+- 本地 `/api/calendar/sync`：未登录 401。
+- 本地 `/api/auth/google`：307 到 Google OAuth，redirect_uri 指向 `https://focuspomo.bz9.me/api/auth/google/callback`，scope 包含 Calendar events。
+- 公网首页：200。
+- 公网 9 个 `_next/static` assets：全部 200。
+- 公网 `/api/me`：200，未登录返回 `user:null`。
+- 公网 `/api/sync`：未登录 401。
+- `focuspomo_*` 数据表存在。
+- `.env.local` 未被 git 跟踪；`.next`、`public`、`src`、`package.json`、`ecosystem.config.js` 扫描未发现 Google secret 字符串。
+
+剩余需要真机/账号验证：
+- 用户在浏览器中完成 Google consent 后，验证 callback 建 session、设置页显示头像邮箱、备份/恢复云端快照、完成番茄后 Google Calendar 出现对应事件。

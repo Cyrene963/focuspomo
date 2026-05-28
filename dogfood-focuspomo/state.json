@@ -33,14 +33,19 @@
     "build + PM2 restart + local/public HTTP verification after layout/gesture fixes",
     "public root/SW/static/icon verification after layout/gesture deploy",
     "gesture scope regression: tasks page vertical swipe disabled",
-    "keyboard ArrowUp scope restricted to timer page"
+    "keyboard ArrowUp scope restricted to timer page",
+    "Google OAuth login API with calendar.events scope",
+    "local-first cloud snapshot sync API",
+    "Google Calendar completed-pomodoro sync API",
+    "Tonight remaining pomodoro capacity panel",
+    "PM2 .env.local server-secret loading without git tracking"
   ],
   "next_steps": [
     "real iPad installed-PWA verification",
     "count-up mode",
     "visual parity against App Store screenshots"
   ],
-  "updated_at": "2026-05-28T17:22:37+08:00",
+  "updated_at": "2026-05-28T18:31:06+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -70,12 +75,19 @@
     "running_swipe_down_home_present": true,
     "notes": "Browser toolset was unavailable in this runtime, so verification used source audit, curl with browser-like probes, TypeScript, build, PM2 and live asset/icon probes.",
     "tasks_page_vertical_summary_swipe_disabled": true,
-    "arrow_up_summary_timer_only": true
+    "arrow_up_summary_timer_only": true,
+    "google_oauth_redirect_present": true,
+    "google_calendar_scope_present": true,
+    "cloud_sync_api_unauthenticated_401": true,
+    "calendar_sync_api_unauthenticated_401": true,
+    "focuspomo_db_tables_present": true,
+    "env_local_untracked": true,
+    "tonight_capacity_panel_present": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "P1-14 gesture scope fixed/deployed; tasks page no longer has vertical Summary swipe, ArrowUp opens Summary only on timer page; build, PM2 restart, local/public HTTP, live static asset probes passed."
+  "last_verification_note": "Google OAuth/cloud sync/Calendar sync and tonight-capacity panel deployed; TypeScript, production build, PM2 restart, local/public API probes, public static asset checks, DB table checks, and secret scan passed. Full Google callback/Calendar insert still requires user to complete Google consent in browser."
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
+import CloudSyncPanel from "@/components/CloudSyncPanel";
 
 function IOSToggle({ value, onToggle, color = "#34C759" }: { value: boolean; onToggle: () => void; color?: string }) {
   return (
@@ -221,13 +222,8 @@ export default function SettingsPage() {
         />
       </Section>
 
-      <Section title="标签">
-        <Row
-          title="当前标签"
-          subtitle="回到首页点标签胶囊即可切换或新建标签。"
-          right={<span style={{ fontSize: 14, fontWeight: 700, color: store.selectedTag.color }}>{store.selectedTag.name}</span>}
-          noBorder
-        />
+      <Section title="云同步">
+        <CloudSyncPanel />
       </Section>
 
       <Section title="提醒">

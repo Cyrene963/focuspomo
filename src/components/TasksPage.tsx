@@ -31,6 +31,19 @@ function todayStart() {
   return d.getTime();
 }
 
+function nextMidnight() {
+  const d = new Date();
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
+}
+
+function formatHourMinute(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 60000));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? `${h}小时${m}分` : `${m}分`;
+}
+
 function startOfWeek(d: Date) {
   const r = new Date(d);
   r.setDate(r.getDate() - r.getDay());
@@ -211,7 +224,7 @@ function NewTaskForm() {
 }
 
 export default function TasksPage() {
-  const { tasks, smartPlanToday, clearCompletedTasks } = useStore();
+  const { tasks, smartPlanToday, clearCompletedTasks, selectedTag, shortBreak } = useStore();
   const active = tasks.filter(t => !t.completed);
   const completed = tasks.filter(t => t.completed);
   const today = [...tasks]
@@ -221,6 +234,12 @@ export default function TasksPage() {
   const doneToday = tasks.filter(t => t.completedAt && t.completedAt >= todayStart()).length;
   const weekDone = tasks.filter(t => t.completedAt && t.completedAt >= startOfWeek(new Date())).length;
   const progress = today.length ? today.filter(t => t.completed).length / today.length : Math.min(1, doneToday / 3);
+  const tonightMs = Math.max(0, nextMidnight() - Date.now());
+  const focusMs = Math.max(60_000, selectedTag.duration * 1000);
+  const cycleMs = focusMs + Math.max(0, shortBreak * 1000);
+  const remainingPomodoros = Math.floor(tonightMs / cycleMs);
+  const plannedPomodoros = today.filter(t => !t.completed).reduce((sum, t) => sum + t.estimatedPomodoros, 0);
+  const capacityDelta = remainingPomodoros - plannedPomodoros;
 
   const matrixOrder: TaskQuadrant[] = ["do", "schedule", "delegate", "drop"];
   const quadrants = useMemo(() => {
@@ -243,6 +262,29 @@ export default function TasksPage() {
       </div>
 
       <NewTaskForm />
+
+      <section style={{ margin: "0 16px 18px", borderRadius: 26, padding: "16px 18px", background: capacityDelta >= 0 ? "rgba(85,166,122,0.12)" : "rgba(232,100,78,0.12)", border: `1px solid ${capacityDelta >= 0 ? "rgba(85,166,122,0.14)" : "rgba(232,100,78,0.14)"}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "var(--text)" }}>今晚还剩多少番茄？</div>
+            <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.5 }}>到 24:00 还剩 {formatHourMinute(tonightMs)}，按当前 {Math.round(selectedTag.duration / 60)} 分钟专注 + {Math.round(shortBreak / 60)} 分钟休息估算。</div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 30, fontWeight: 950, color: capacityDelta >= 0 ? "var(--leaf)" : "var(--accent)", lineHeight: 1 }}>{remainingPomodoros}</div>
+            <div style={{ fontSize: 11, color: "var(--text-sec)", fontWeight: 800 }}>可用番茄</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ borderRadius: 16, padding: "10px 12px", background: "rgba(255,255,255,0.42)" }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--text)" }}>{plannedPomodoros}🍅</div>
+            <div style={{ fontSize: 11, color: "var(--text-sec)", fontWeight: 750 }}>今日 Top 3 还需要</div>
+          </div>
+          <div style={{ borderRadius: 16, padding: "10px 12px", background: "rgba(255,255,255,0.42)" }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: capacityDelta >= 0 ? "var(--leaf)" : "var(--accent)" }}>{capacityDelta >= 0 ? `余 ${capacityDelta}` : `缺 ${Math.abs(capacityDelta)}`}🍅</div>
+            <div style={{ fontSize: 11, color: "var(--text-sec)", fontWeight: 750 }}>{capacityDelta >= 0 ? "可以留给缓冲" : "先砍掉低价值任务"}</div>
+          </div>
+        </div>
+      </section>
 
       <section style={{ margin: "0 16px 18px", borderRadius: 26, padding: "14px 16px", background: "rgba(45,38,37,0.045)", border: "1px solid rgba(0,0,0,0.04)" }}>
         <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text)", marginBottom: 8 }}>怎么排优先级？</div>
