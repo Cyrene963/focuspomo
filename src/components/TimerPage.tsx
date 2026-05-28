@@ -128,6 +128,7 @@ export default function TimerPage() {
   useEffect(() => () => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); }, []);
 
   const panelTransition = { type: "spring" as const, stiffness: 360, damping: 36, mass: 0.72 };
+  const idleTimerSize = "min(clamp(220px, 56vw, 380px), calc(var(--app-height, 100dvh) * 0.42))";
 
   // Atmospheric fluid gradient
   const bgColor = isActive
@@ -186,20 +187,22 @@ export default function TimerPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.018 }}
               transition={panelTransition}
-              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}
+              style={{ position: "absolute", inset: 0, display: "grid", gridTemplateRows: "minmax(28px, 1fr) auto auto auto minmax(24px, 0.85fr) auto", justifyItems: "center", alignItems: "center", width: "100%", padding: "max(18px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom))", boxSizing: "border-box" }}
             >
-              <div style={{ flex: 1, minHeight: 80 }} />
+              <div />
 
               {/* Timer circle */}
               <motion.div className="app-composited" style={{
-                width: "clamp(200px, 45vw, 380px)",
-                height: "clamp(200px, 45vw, 380px)",
+                width: idleTimerSize,
+                height: idleTimerSize,
+                aspectRatio: "1 / 1",
+                flex: "0 0 auto",
                 borderRadius: "50%",
                 border: "1.5px solid rgba(180,150,130,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <span className="timer-number" style={{
-                  fontSize: "clamp(3.5rem, 12vw, 6rem)",
+                  fontSize: "min(clamp(3.25rem, 11.5vw, 5.8rem), calc(var(--app-height, 100dvh) * 0.12))",
                 }}>
                   {mm}:{ss}
                 </span>
@@ -225,14 +228,14 @@ export default function TimerPage() {
                 完成后会收获一个小番茄
               </div>
 
-              <div style={{ flex: 1, minHeight: 40 }} />
+              <div />
 
               {/* Start button */}
               <motion.button
                 onClick={(e) => { e.stopPropagation(); start(); }}
                 className="pressable" whileTap={{ scale: 0.96 }}
                 style={{
-                  marginBottom: 100,
+                  marginBottom: "max(76px, env(safe-area-inset-bottom))",
                   width: "clamp(200px, 55vw, 260px)",
                   height: "clamp(52px, 9vh, 62px)",
                   borderRadius: 999,
@@ -262,7 +265,7 @@ export default function TimerPage() {
                 className="timer-number app-composited"
                 transition={panelTransition}
                 style={{
-                  fontSize: "clamp(5rem, 15vw, 15rem)",
+                  fontSize: "min(clamp(5rem, 15vw, 15rem), calc(var(--app-height, 100dvh) * 0.22))",
                 }}
               >
                 {mm}:{ss}
@@ -286,18 +289,33 @@ export default function TimerPage() {
             >
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                style={{ fontSize: 72 }}>🍅</motion.div>
-              <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>完成啦！</span>
-              <span style={{ fontSize: 17, color: "var(--text-sec)" }}>+1 🍅</span>
+                style={{ fontSize: 72 }}>{isBreak ? "☕️" : "🍅"}</motion.div>
+              <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>{isBreak ? "休息结束" : "完成啦！"}</span>
+              <span style={{ fontSize: 17, color: "var(--text-sec)" }}>{isBreak ? "准备进入下一轮专注" : "+1 🍅"}</span>
               <div style={{ display: "flex", gap: 14, marginTop: 28 }}>
-                <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); startBreak(); }}
-                  style={{ padding: "14px 32px", borderRadius: 28, background: "var(--leaf)", color: "#FFF", fontSize: 16, fontWeight: 700 }}>
-                  开始休息
-                </motion.button>
-                <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); reset(); }}
-                  style={{ padding: "14px 32px", borderRadius: 28, background: "var(--separator)", color: "var(--text)", fontSize: 16, fontWeight: 600 }}>
-                  跳过
-                </motion.button>
+                {isBreak ? (
+                  <>
+                    <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); start(); }}
+                      style={{ padding: "14px 32px", borderRadius: 28, background: "var(--text)", color: "var(--bg)", fontSize: 16, fontWeight: 700 }}>
+                      开始专注
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); reset(); }}
+                      style={{ padding: "14px 32px", borderRadius: 28, background: "var(--separator)", color: "var(--text)", fontSize: 16, fontWeight: 600 }}>
+                      稍后再说
+                    </motion.button>
+                  </>
+                ) : (
+                  <>
+                    <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); startBreak(); }}
+                      style={{ padding: "14px 32px", borderRadius: 28, background: "var(--leaf)", color: "#FFF", fontSize: 16, fontWeight: 700 }}>
+                      开始休息
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); reset(); }}
+                      style={{ padding: "14px 32px", borderRadius: 28, background: "var(--separator)", color: "var(--text)", fontSize: 16, fontWeight: 600 }}>
+                      跳过
+                    </motion.button>
+                  </>
+                )}
               </div>
             </motion.div>
           )}
@@ -326,11 +344,18 @@ export default function TimerPage() {
               if (dx > 0) swipeRight();
               return;
             }
-            if (vy > vx && dy < -80) {
+            if (vy > vx && dy < -72) {
               // Swipe UP — cancel hold, go to summary
               if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
               setHoldActive(false);
               goSummary();
+              return;
+            }
+            if (vy > vx && dy > 72) {
+              // Swipe DOWN — cancel the current timer/break and return to the home timer screen.
+              if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
+              setHoldActive(false);
+              interrupt();
               return;
             }
             // Not a swipe — normal hold-to-stop release

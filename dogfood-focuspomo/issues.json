@@ -246,5 +246,75 @@
     "status": "fixed_deployed",
     "fixed_at": "2026-05-28T00:11:58+08:00",
     "fix_summary": "计时 tick 改为 1000ms；移除 timer-face layoutId 跨状态布局 morph；页面 spring 调快为 360/36/0.72；GestureWrapper 加 compositor class/layout=false；TomatoPhysics 改为触发后临时 Engine.update+RAF，静止后停止，不再 idle 常驻 Runner/RAF；加入 prefers-reduced-motion fallback。"
+  },
+  {
+    "id": "P1-12",
+    "severity": "P1",
+    "category": "Functional/Break flow",
+    "title": "休息结束页仍显示“完成啦 +1 🍅”并继续给“开始休息”按钮",
+    "evidence": "源码审计发现 store.complete() 对 shortBreak/longBreak 结束只设置 state='completed'，TimerPage completed UI 不区分 focus 与 break。因此休息倒计时结束后会显示番茄完成和 +1 🍅，并给用户再次开始休息，而不是进入下一轮专注。这会误导真实循环流程，虽不写 history，但核心体验明显错误。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T06:41:39+08:00",
+    "fix_summary": "TimerPage completed UI 现在按 isBreak 分支：休息结束显示 ☕️、文案“休息结束 / 准备进入下一轮专注”，主按钮为“开始专注”并调用 start()；次按钮为“稍后再说”并 reset。专注完成页仍显示 🍅、+1 和开始休息。"
+  },
+  {
+    "id": "P2-9",
+    "severity": "P2",
+    "category": "UX/Truthfulness",
+    "title": "任务/总结页把普通本地排序包装成“智能选”，容易显得像假 AI 功能",
+    "evidence": "本轮源码体验评测发现 smartPlanToday 只是按 plannedToday、重要/紧急、优先级和番茄数做本地确定性排序，但 UI 文案写成“智能选今天三件事 / 智能选3件”。功能真实可用，但表达会让用户以为有更强的 AI/模型能力，和“不编造假功能、不要 AI 味”的规则冲突。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T09:04:28+08:00",
+    "fix_summary": "保留原有确定性排序逻辑，将 SummaryPage/TasksPage 的按钮和空状态文案改为“按优先级选今天三件事 / 按优先级选3件”，让 UI 准确表达实际能力。"
+  },
+  {
+    "id": "P2-10",
+    "severity": "P2",
+    "category": "UX/Truthfulness",
+    "title": "任务拆解按钮长期显示为魔法符号，普通任务点了没有反馈",
+    "evidence": "源码审计发现 TasksPage 每个非 compact 任务都显示 ✦ 拆解按钮，但 splitTask() 只会在标题包含逗号、顿号、分号、斜杠或 and/then 时拆分；普通单句任务点击没有任何变化，像半成品/AI 魔法假控件。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T11:13:57+08:00",
+    "fix_summary": "新增 canSplitTaskTitle()，只有标题确实能按明确分隔符拆成多个片段时才显示拆解按钮；按钮文案从 ✦ 改为明确的“拆”，aria/title 说明实际规则。"
+  },
+  {
+    "id": "P2-11",
+    "severity": "P2",
+    "category": "UX/Copy truthfulness",
+    "title": "声音提醒设置文案漏掉休息结束，和真实行为不一致",
+    "evidence": "TimerPage 完成检测对番茄完成和休息结束都会调用 playDing(muted)，但 SettingsPage 文案只写“完成番茄时播放短提示音”，会让用户误解休息结束不会响。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T11:13:57+08:00",
+    "fix_summary": "设置页声音提醒 subtitle 改为“完成番茄或休息结束时播放短提示音”，只修正真实行为描述，没有增加假设置。"
+  },
+  {
+    "id": "P1-13",
+    "severity": "P1",
+    "category": "Functional/Product parity",
+    "title": "缺少手动补录专注时间，App Store 基准功能不可达",
+    "evidence": "本轮覆盖 App Store 我的番茄 baseline 时复核到“手动添加专注时间”仍在 backlog；源码搜索 addManual/manual/手动/补录为 0，时间轴页只能展示已有 history，无法补录真实专注记录。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T15:29:24+08:00",
+    "fix_summary": "在 store 增加 addManualRecord()，CalendarPage 增加原生 bottom-sheet 式“补录专注”：选择标签、日期、开始时间和时长后写入真实 completed history；不创建 demo 数据。"
+  },
+  {
+    "id": "P0-7",
+    "severity": "P0",
+    "category": "iPad Safari/Layout",
+    "title": "小高度/iPad Safari toolbar 场景下主计时圆盘和数字仍可能被纵向压扁",
+    "evidence": "用户真机反馈仍看到主页被压扁；源码复核发现 idle timer 使用 clamp(200px,45vw,380px) 主要跟随宽度，页面垂直布局靠 flex spacer 撑开。在 iPad Safari toolbar 未隐藏或可见高度变小时，圆盘/大数字没有跟随 --app-height 设上限，容易与底部按钮/顶部区域挤压。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T17:12:26+08:00",
+    "fix_summary": "TimerPage idle 布局改为固定 grid rows；圆盘尺寸改为 min(clamp(...), calc(var(--app-height)*0.42))，增加 aspectRatio 1/1 和 flex 0 0 auto；空闲和运行中大数字都加可见高度上限，按钮底部间距使用 safe-area。"
+  },
+  {
+    "id": "P0-8",
+    "severity": "P0",
+    "category": "Gesture/Navigation",
+    "title": "Summary 下滑返回与运行页下滑回主页在 iOS Safari 上不够稳",
+    "evidence": "用户要求下滑返回主页；源码复核发现 GestureWrapper 只依赖 PointerEvent，iOS Safari/触控滚动场景可能被 pan-y 原生滚动取消；运行中页面只支持上滑进 Summary 和长按停止，没有独立下滑回主页语义。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T17:12:26+08:00",
+    "fix_summary": "GestureWrapper 增加 touchstart/touchend fallback，并支持 touchAction prop；Summary 页面设置 touchAction=none 让下滑关闭优先；运行中计时页增加纵向下滑分支，取消当前专注/休息并回到主页计时状态。滚动面板内部已滚动时仍让原生滚动优先。"
   }
 ]

@@ -58,10 +58,19 @@ function ProgressRing({ value }: { value: number }) {
   );
 }
 
+function canSplitTaskTitle(title: string) {
+  const pieces = title
+    .split(/[，,、；;\/]|\s+and\s+|\s+then\s+/i)
+    .map(s => s.trim())
+    .filter(s => s.length >= 2 && s !== title);
+  return pieces.length > 1;
+}
+
 function TaskRow({ task, compact = false }: { task: TaskItem; compact?: boolean }) {
   const { toggleTask, updateTask, deleteTask, splitTask } = useStore();
   const q = quadrantOf(task);
   const meta = QUADRANT_META[q];
+  const canSplit = canSplitTaskTitle(task.title);
   return (
     <div style={{
       display: "flex",
@@ -116,7 +125,18 @@ function TaskRow({ task, compact = false }: { task: TaskItem; compact?: boolean 
       </div>
       {!compact && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-          <button type="button" className="pressable" onClick={() => splitTask(task.id)} aria-label="尝试拆解任务" title="按逗号/顿号拆成小任务" style={{ fontSize: 15, padding: 6, color: "var(--text-sec)" }}>✦</button>
+          {canSplit && (
+            <button
+              type="button"
+              className="pressable"
+              onClick={() => splitTask(task.id)}
+              aria-label="拆成小任务"
+              title="按逗号、顿号、分号拆成小任务"
+              style={{ fontSize: 15, padding: 6, color: "var(--text-sec)" }}
+            >
+              拆
+            </button>
+          )}
           <button type="button" className="pressable" onClick={() => deleteTask(task.id)} aria-label="删除任务" style={{ fontSize: 17, padding: 6, color: "var(--text-sec)" }}>×</button>
         </div>
       )}
@@ -184,7 +204,7 @@ function NewTaskForm() {
         </div>
       </div>
       <button type="button" onClick={smartPlanToday} className="pressable" style={{ marginTop: 12, width: "100%", borderRadius: 18, padding: "11px 12px", background: "rgba(85,166,122,0.13)", color: "var(--leaf)", fontSize: 13, fontWeight: 850 }}>
-        智能选今天三件事
+        按优先级选今天三件事
       </button>
     </div>
   );
@@ -248,7 +268,7 @@ export default function TasksPage() {
           <button type="button" onClick={smartPlanToday} className="pressable" style={{ borderRadius: 16, padding: "8px 10px", color: "var(--accent)", background: "rgba(255,255,255,0.46)", fontSize: 12, fontWeight: 900 }}>重排</button>
         </div>
         {today.length === 0 ? (
-          <div style={{ color: "var(--text-sec)", fontSize: 13, lineHeight: 1.65, padding: "12px 0" }}>还没选今日三件事。先写下任务，再点“智能选今天三件事”。</div>
+          <div style={{ color: "var(--text-sec)", fontSize: 13, lineHeight: 1.65, padding: "12px 0" }}>还没选今日三件事。先写下任务，再点“按优先级选今天三件事”。</div>
         ) : today.map(t => <TaskRow key={t.id} task={t} compact />)}
       </section>
 

@@ -1,5 +1,25 @@
-const CACHE_NAME = 'focuspomo-v1779372627-pwa7';
+const CACHE_NAME = 'focuspomo-v1779372627-pwa8';
 const APP_SHELL_URL = '/';
+
+// Build-time injected from `.next/static` by scripts/inject-sw-precache.js.
+// iPadOS standalone PWAs white-screen offline if even one current Next chunk is missing.
+// Do not rely only on runtime HTML regex extraction for the offline shell.
+// __PRECACHE_NEXT_STATIC_START__
+const PRECACHE_NEXT_STATIC = [
+  "/_next/static/MHVPRC1wTV_xeKX-WYjAg/_buildManifest.js",
+  "/_next/static/MHVPRC1wTV_xeKX-WYjAg/_clientMiddlewareManifest.js",
+  "/_next/static/MHVPRC1wTV_xeKX-WYjAg/_ssgManifest.js",
+  "/_next/static/chunks/03cnjj9mnzy_p.js",
+  "/_next/static/chunks/03~yq9q893hmn.js",
+  "/_next/static/chunks/07lhk_q6pmm3r.js",
+  "/_next/static/chunks/0dbhjjzl8qfwv.js",
+  "/_next/static/chunks/0ht900cau6_ur.js",
+  "/_next/static/chunks/0z-96vu5y6dzv.js",
+  "/_next/static/chunks/0~-2ek~94pk~7.css",
+  "/_next/static/chunks/10alx5.du6frt.js",
+  "/_next/static/chunks/turbopack-0bxcrz71-nfi1.js"
+];
+// __PRECACHE_NEXT_STATIC_END__
 
 const STATIC_ASSETS = [
   '/manifest.json',
@@ -30,8 +50,10 @@ async function cacheAppShell(cache) {
     if (!response || !response.ok) return false;
     const html = await response.clone().text();
     await cache.put(APP_SHELL_URL, response.clone());
+    await cache.put('/?source=pwa', response.clone());
+    await cache.put('/?shortcut=start', response.clone());
     await cache.put('/offline.html', new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
-    const assetUrls = extractNextStaticAssets(html);
+    const assetUrls = Array.from(new Set([...PRECACHE_NEXT_STATIC, ...extractNextStaticAssets(html)]));
     await Promise.allSettled(assetUrls.map(async (asset) => {
       const assetResponse = await fetch(asset, { cache: 'reload' });
       if (assetResponse && assetResponse.ok) await cache.put(asset, assetResponse);
@@ -50,6 +72,10 @@ self.addEventListener('install', (event) => {
         if (response && response.ok) await cache.put(asset, response);
       }));
       await cache.put('/offline.html', new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+      await Promise.allSettled(PRECACHE_NEXT_STATIC.map(async (asset) => {
+        const response = await fetch(asset, { cache: 'reload' });
+        if (response && response.ok) await cache.put(asset, response);
+      }));
       await cacheAppShell(cache);
     })
   );
@@ -83,7 +109,7 @@ self.addEventListener('fetch', (event) => {
         .then((response) => response)
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          return (await cache.match(APP_SHELL_URL)) || (await cache.match('/offline.html')) || new Response(OFFLINE_HTML, {
+          return (await cache.match(event.request)) || (await cache.match(url.pathname)) || (await cache.match(APP_SHELL_URL)) || (await cache.match('/offline.html')) || new Response(OFFLINE_HTML, {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
         })

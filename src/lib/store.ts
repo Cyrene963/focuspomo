@@ -76,6 +76,7 @@ interface Store {
   // History
   history: PomodoroRecord[];
   cycleCount: number;
+  addManualRecord: (input: { tagId: string; startTime: number; durationSeconds: number }) => void;
 
   // Tasks
   tasks: TaskItem[];
@@ -190,7 +191,7 @@ export const useStore = create<Store>((set, get) => ({
   complete: () => {
     const { selectedTag, startTime, history, cycleCount, session, activeDuration } = get();
     if (session !== 'focus') {
-      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
+      set({ state: 'completed', remaining: 0, startTime: null });
       return;
     }
     const now = Date.now();
@@ -260,6 +261,25 @@ export const useStore = create<Store>((set, get) => ({
 
   history: loadJSON<PomodoroRecord[]>('fp-history', []),
   cycleCount: loadJSON('fp-cycle-count', 0),
+  addManualRecord: ({ tagId, startTime, durationSeconds }) => {
+    const tag = get().tags.find(t => t.id === tagId) || get().selectedTag;
+    const plannedDuration = Math.max(60, Math.min(12 * 60 * 60, Math.round(durationSeconds)));
+    const safeStart = Number.isFinite(startTime) ? startTime : Date.now() - plannedDuration * 1000;
+    const record: PomodoroRecord = {
+      id: crypto.randomUUID(),
+      tagId: tag.id,
+      tagName: tag.name,
+      tagColor: tag.color,
+      plannedDuration,
+      actualDuration: plannedDuration,
+      startTime: safeStart,
+      endTime: safeStart + plannedDuration * 1000,
+      completed: true,
+    };
+    const h = [...get().history, record];
+    saveJSON('fp-history', h);
+    set({ history: h });
+  },
 
   tasks: loadJSON<TaskItem[]>('fp-tasks', []),
   addTask: (input) => {

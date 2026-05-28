@@ -233,7 +233,7 @@ export default function SettingsPage() {
       <Section title="提醒">
         <Row
           title="声音提醒"
-          subtitle="完成番茄时播放短提示音"
+          subtitle="完成番茄或休息结束时播放短提示音"
           right={<IOSToggle value={!store.muted} onToggle={store.toggleMute} />}
         />
         <Row

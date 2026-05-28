@@ -27,9 +27,75 @@ function startOfWeek(d: Date) { const r = new Date(d); r.setDate(r.getDate() - r
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function sameDay(a: Date, b: Date) { return a.toDateString() === b.toDateString(); }
 
+function ManualAddSheet({ onClose }: { onClose: () => void }) {
+  const { tags, selectedTag, addManualRecord } = useStore();
+  const now = new Date();
+  const [tagId, setTagId] = useState(selectedTag.id);
+  const [date, setDate] = useState(() => now.toISOString().slice(0, 10));
+  const [time, setTime] = useState(() => `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+  const [minutes, setMinutes] = useState(25);
+
+  const submit = () => {
+    const start = new Date(`${date}T${time}:00`).getTime();
+    if (!Number.isFinite(start)) return;
+    addManualRecord({ tagId, startTime: start, durationSeconds: minutes * 60 });
+    onClose();
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", height: 44, borderRadius: 16, border: "1px solid var(--separator)",
+    background: "var(--control-bg)", color: "var(--text)", padding: "0 12px", fontSize: 15,
+    fontFamily: "var(--font)", outline: "none",
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(45,38,37,0.22)", backdropFilter: "blur(10px)" }}>
+      <section onClick={(e) => e.stopPropagation()} style={{ width: "min(430px, 100%)", borderRadius: "28px 28px 0 0", background: "var(--bg)", boxShadow: "0 -18px 46px rgba(45,38,37,0.18)", padding: "14px 20px max(24px, env(safe-area-inset-bottom))" }}>
+        <div style={{ width: 42, height: 5, borderRadius: 3, background: "var(--separator)", margin: "0 auto 18px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--text)" }}>补录专注</div>
+            <div style={{ fontSize: 12, color: "var(--text-sec)", marginTop: 4 }}>只写入你确认完成的真实专注时间。</div>
+          </div>
+          <button type="button" onClick={onClose} className="pressable" style={{ width: 36, height: 36, borderRadius: 18, background: "var(--control-bg)", color: "var(--text-sec)", fontSize: 20 }}>×</button>
+        </div>
+
+        <div style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6, fontSize: 12, fontWeight: 800, color: "var(--text-sec)" }}>标签
+            <select value={tagId} onChange={(e) => setTagId(e.target.value)} style={fieldStyle}>
+              {tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
+            </select>
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <label style={{ display: "grid", gap: 6, fontSize: 12, fontWeight: 800, color: "var(--text-sec)" }}>日期
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={fieldStyle} />
+            </label>
+            <label style={{ display: "grid", gap: 6, fontSize: 12, fontWeight: 800, color: "var(--text-sec)" }}>开始
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={fieldStyle} />
+            </label>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", borderRadius: 18, background: "var(--control-bg)" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 850, color: "var(--text)" }}>时长</div>
+              <div style={{ fontSize: 12, color: "var(--text-sec)", marginTop: 3 }}>按 5 分钟调整，最多 12 小时。</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button type="button" className="pressable" onClick={() => setMinutes(v => Math.max(1, v - 5))} style={{ width: 32, height: 32, borderRadius: 16, background: "rgba(224,122,69,0.12)", color: "var(--accent)", fontSize: 20 }}>−</button>
+              <span style={{ minWidth: 54, textAlign: "center", fontSize: 15, fontWeight: 900, color: "var(--text)" }}>{minutes}分</span>
+              <button type="button" className="pressable" onClick={() => setMinutes(v => Math.min(720, v + 5))} style={{ width: 32, height: 32, borderRadius: 16, background: "rgba(224,122,69,0.12)", color: "var(--accent)", fontSize: 20 }}>+</button>
+            </div>
+          </div>
+          <button type="button" onClick={submit} className="pressable" style={{ marginTop: 4, height: 50, borderRadius: 25, background: "var(--text)", color: "var(--bg)", fontSize: 16, fontWeight: 850 }}>保存真实记录</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function CalendarPage() {
   const { history } = useStore();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const today = new Date();
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekEnd = addDays(weekStart, 7);
@@ -66,6 +132,9 @@ export default function CalendarPage() {
             }}>今天</button>
           )}
         </div>
+        <button onClick={() => setShowManualAdd(true)} className="pressable" style={{
+          padding: "9px 13px", borderRadius: 16, background: "var(--text)", color: "var(--bg)", fontSize: 12, fontWeight: 850,
+        }}>补录</button>
       </div>
 
       {/* Day headers */}
@@ -160,6 +229,7 @@ export default function CalendarPage() {
           ))}
         </div>
       </div>
+      {showManualAdd && <ManualAddSheet onClose={() => setShowManualAdd(false)} />}
     </div>
   );
 }

@@ -113,6 +113,7 @@ export default function AppShell() {
         )}
         {page === "summary" && (
           <GestureWrapper key="summary" enterX={0} enterY={60}
+            touchAction="none"
             onSwipeDown={() => go("timer")}
           >
             <SummaryPage />

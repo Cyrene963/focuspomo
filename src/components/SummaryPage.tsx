@@ -127,11 +127,11 @@ export default function SummaryPage() {
             </div>
             <button type="button" onClick={smartPlanToday} className="pressable" style={{
               borderRadius: 18, background: "var(--accent)", color: "white", fontSize: 12, fontWeight: 900, padding: "10px 12px",
-            }}>智能选3件</button>
+            }}>按优先级选3件</button>
           </div>
           {topTasks.length === 0 ? (
             <div style={{ borderRadius: 22, padding: 18, background: "var(--separator)", color: "var(--text-sec)", fontSize: 13, lineHeight: 1.6 }}>
-              还没有待办。去任务页写下脑子里的事情，再用“智能选3件”把今天真正要做的留下。
+              还没有待办。去任务页写下脑子里的事情，再按优先级把今天真正要做的留下。
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

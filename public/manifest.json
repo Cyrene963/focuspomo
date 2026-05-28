@@ -3,7 +3,7 @@
   "name": "FocusPomo",
   "short_name": "FocusPomo",
   "description": "极简专注番茄钟，提供专注计时、统计和时间轴回顾。",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#FFF8F0",
