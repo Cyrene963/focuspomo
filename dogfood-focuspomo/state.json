@@ -15,6 +15,7 @@
     "TypeScript gate",
     "TypeScript gate after layout/gesture fixes",
     "TypeScript gate after manual record implementation",
+    "automatic cloud snapshot sync",
     "build + PM2 restart + local/public HTTP verification",
     "build + PM2 restart + local/public HTTP verification after layout/gesture fixes",
     "build + PM2 restart + local/public HTTP verification after manual record implementation",
@@ -27,6 +28,7 @@
     "keyboard ArrowUp scope restricted to timer page",
     "local-first cloud snapshot sync API",
     "localhost HTTP health check",
+    "login hydration with local-vs-cloud timestamp choice",
     "manual focus time entry baseline audit",
     "manual focus time entry implementation",
     "persistent harvested tomato physics world",
@@ -34,6 +36,7 @@
     "public _next/static chunk verification",
     "public root/SW/static asset verification after deploy",
     "public root/SW/static/icon verification after layout/gesture deploy",
+    "settings sync status UX",
     "source audit: PWA manifest/service worker/icon alignment",
     "source audit: first open / timer start-stop-complete-break",
     "source audit: keyboard/swipe mapping",
@@ -53,7 +56,7 @@
     "count-up mode",
     "visual parity against App Store screenshots"
   ],
-  "updated_at": "2026-05-28T20:10:19+08:00",
+  "updated_at": "2026-05-28T20:44:18+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -112,12 +115,17 @@
     "pm2_restart_passed_after_split_oauth": true,
     "public_login_redirect_ok": true,
     "public_calendar_redirect_ok": true,
-    "calendar_sync_requires_auth": true
+    "calendar_sync_requires_auth": true,
+    "auto_cloud_sync_tsc_passed": true,
+    "auto_cloud_sync_build_passed": true,
+    "auto_cloud_sync_pm2_restart_passed": true,
+    "sync_api_unauthenticated_get_401": true,
+    "sync_api_unauthenticated_put_401": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "Split OAuth so /api/auth/google uses openid/email/profile only, /api/auth/google/calendar separately requests calendar.events, and calendar sync returns 428 when calendar permission is missing. Verified tsc, build, PM2 restart, public auth redirects, and auth-gated calendar sync probe."
+  "last_verification_note": "Cloud sync is now automatic: login hydrates/restores or initializes cloud backup; local persisted state changes debounce-upload to /api/sync; Settings panel shows status and keeps manual sync/restore as fallback. Verified tsc, build, PM2 restart, unauthenticated sync API 401 probes, root page 200/no-cache."
 }

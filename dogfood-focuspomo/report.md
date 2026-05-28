@@ -214,3 +214,34 @@ Google Console 需要确认：
 产品结论：
 - 云备份/恢复可先作为主线能力上线。
 - Calendar 同步作为可选增强能力，后续需要公开给多人时再处理 Google verification，不再挡住基础云同步。
+
+## 2026-05-28T20:44:18+08:00 云同步自动化修正
+
+用户反馈：云同步不应该是需要手动记得点的按钮；登录后用户心智是自动备份、自动恢复、自动保护数据。
+
+问题：
+- 之前真正的云备份只在设置页“备份本机 / 恢复云端”按钮里触发。
+- 后台 agent 只自动同步 Google Calendar，不自动同步核心本地数据。
+- 这会造成产品语言叫“云同步”，但实际体验像“手动导入导出”。
+
+修复：
+- 新增 `src/lib/cloudSync.ts`，统一 snapshot keys、clientUpdatedAt、签名、读取/应用 snapshot、json fetch。
+- `CloudSyncAgent` 登录后自动 GET `/api/sync`：
+  - 云端较新：自动恢复并刷新页面；
+  - 本机较新：自动上传本机 snapshot；
+  - 云端为空且本机有数据：自动初始化云端备份。
+- 本机任务、标签、番茄记录、设置等持久化状态变化后，2 秒 debounce 自动 PUT `/api/sync`。
+- Calendar 同步仍保持单独：只同步已完成真实专注块，不影响基础云备份。
+- 设置页改成状态入口：显示“自动同步已开启 / 正在自动同步 / 已自动同步 / 离线稍后重试”，手动按钮改为“立即同步 / 从云端恢复”作为兜底。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `npm run build`：通过。
+- `pm2 restart focuspomo --update-env`：成功。
+- 公网 `GET /api/sync` 未登录返回 401。
+- 公网 `PUT /api/sync` 未登录返回 401。
+- 根页面返回 200 且 no-cache header 正常。
+
+产品结论：
+- 最合适的方案不是做复杂 CRDT/实时协作，而是 local-first 单用户自动 snapshot 同步：简单、稳定、符合番茄钟/任务清单的实际风险模型。
+- 以后如果要多设备冲突合并，再做 per-record merge；当前阶段用 clientUpdatedAt 的 last-writer-wins 足够，不会把项目搞臃肿。

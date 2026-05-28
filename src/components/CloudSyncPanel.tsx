@@ -2,27 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore, type PomodoroRecord } from "@/lib/store";
-
-const SNAPSHOT_KEYS = [
-  "fp-tags",
-  "fp-selected-tag",
-  "fp-history",
-  "fp-harvested-tomatoes",
-  "fp-cycle-count",
-  "fp-tasks",
-  "fp-pomodoro-cycle",
-  "fp-short-break",
-  "fp-long-break",
-  "fp-muted",
-  "fp-notifications-enabled",
-  "fp-vibration",
-  "fp-24-hour-time",
-  "fp-display-tomatoes",
-  "fp-theme",
-];
+import { applySnapshot, jsonFetch, readSnapshot, type Snapshot } from "@/lib/cloudSync";
 
 type User = { id: string; email: string; name: string | null; picture: string | null; calendarSyncEnabled: boolean };
-type Snapshot = Record<string, unknown>;
 
 type CloudState = {
   user: User | null;
@@ -32,38 +14,22 @@ type CloudState = {
   calendarEnabled: boolean;
 };
 
-function readSnapshot(): Snapshot {
-  const data: Snapshot = {};
-  for (const key of SNAPSHOT_KEYS) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw !== null) data[key] = JSON.parse(raw);
-    } catch {}
-  }
-  data["fp-client-updated-at"] = Date.now();
-  return data;
-}
+type SyncStatus = "ready" | "restoring" | "uploading" | "synced" | "offline";
 
-function applySnapshot(data: Snapshot) {
-  for (const [key, value] of Object.entries(data)) {
-    if (!SNAPSHOT_KEYS.includes(key)) continue;
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+function statusText(status: SyncStatus) {
+  switch (status) {
+    case "restoring": return "正在从云端恢复…";
+    case "uploading": return "正在自动同步…";
+    case "synced": return "已自动同步";
+    case "offline": return "离线，稍后自动重试";
+    default: return "自动同步已开启";
   }
-  window.location.reload();
-}
-
-async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<T>;
 }
 
 export default function CloudSyncPanel() {
   const history = useStore(s => s.history);
   const [state, setState] = useState<CloudState>({ user: null, loading: true, busy: false, message: "", calendarEnabled: false });
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("ready");
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +40,15 @@ export default function CloudSyncPanel() {
       })
       .catch(() => alive && setState(s => ({ ...s, loading: false, message: "无法读取登录状态" })));
     return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    const onSync = (event: Event) => {
+      const status = (event as CustomEvent<{ status?: SyncStatus }>).detail?.status;
+      if (status) setSyncStatus(status);
+    };
+    window.addEventListener("focuspomo:cloud-sync", onSync);
+    return () => window.removeEventListener("focuspomo:cloud-sync", onSync);
   }, []);
 
   const completedRecords = useMemo(() => history.filter(r => r.completed && r.actualDuration >= 60), [history]);
@@ -91,7 +66,7 @@ export default function CloudSyncPanel() {
   const upload = async () => {
     setState(s => ({ ...s, busy: true, message: "正在上传本机数据…" }));
     try {
-      await jsonFetch("/api/sync", { method: "PUT", body: JSON.stringify({ data: readSnapshot(), clientUpdatedAt: Date.now() }) });
+      await jsonFetch("/api/sync", { method: "PUT", body: JSON.stringify({ data: readSnapshot({ touch: true }), clientUpdatedAt: Date.now() }) });
       setState(s => ({ ...s, busy: false, message: "已保存到云端" }));
     } catch {
       setState(s => ({ ...s, busy: false, message: "上传失败，请稍后再试" }));
@@ -150,7 +125,7 @@ export default function CloudSyncPanel() {
       <div style={{ padding: 18, display: "grid", gap: 12 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 850, color: "var(--text)" }}>Google 云同步</div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>登录后可以备份本机任务、番茄记录；Google Calendar 会在登录后单独授权。</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>登录后自动备份本机任务、番茄记录；Google Calendar 会在登录后单独授权。</div>
         </div>
         <a href="/api/auth/google" className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</a>
         {state.message && <div style={{ fontSize: 12, color: "var(--text-sec)" }}>{state.message}</div>}
@@ -167,9 +142,16 @@ export default function CloudSyncPanel() {
           <div style={{ fontSize: 12, color: "var(--text-sec)", overflow: "hidden", textOverflow: "ellipsis" }}>{state.user.email}</div>
         </div>
       </div>
+      <div style={{ borderRadius: 16, padding: "12px 14px", background: "var(--control-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 850, color: "var(--text)" }}>{statusText(syncStatus)}</div>
+          <div style={{ marginTop: 2, fontSize: 11, color: "var(--text-sec)", lineHeight: 1.35 }}>登录后自动恢复较新的云端数据；本机变更会自动保存。</div>
+        </div>
+        <span style={{ width: 9, height: 9, borderRadius: "50%", background: syncStatus === "offline" ? "var(--accent)" : "var(--leaf)", flexShrink: 0 }} />
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <button type="button" disabled={state.busy} onClick={upload} className="pressable" style={{ borderRadius: 16, padding: "11px 10px", background: "rgba(85,166,122,0.14)", color: "var(--leaf)", fontSize: 13, fontWeight: 850 }}>备份本机</button>
-        <button type="button" disabled={state.busy} onClick={restore} className="pressable" style={{ borderRadius: 16, padding: "11px 10px", background: "var(--control-bg)", color: "var(--text)", fontSize: 13, fontWeight: 850 }}>恢复云端</button>
+        <button type="button" disabled={state.busy} onClick={upload} className="pressable" style={{ borderRadius: 16, padding: "11px 10px", background: "rgba(85,166,122,0.14)", color: "var(--leaf)", fontSize: 13, fontWeight: 850 }}>立即同步</button>
+        <button type="button" disabled={state.busy} onClick={restore} className="pressable" style={{ borderRadius: 16, padding: "11px 10px", background: "var(--control-bg)", color: "var(--text)", fontSize: 13, fontWeight: 850 }}>从云端恢复</button>
       </div>
       <button type="button" disabled={state.busy} onClick={toggleCalendar} className="pressable" style={{ borderRadius: 16, padding: "12px 12px", background: state.calendarEnabled ? "rgba(232,100,78,0.13)" : "var(--control-bg)", color: state.calendarEnabled ? "var(--accent)" : "var(--text)", fontSize: 13, fontWeight: 850 }}>
         {state.calendarEnabled ? "同步完成的番茄到 Google Calendar" : "开启 Calendar 同步"}
