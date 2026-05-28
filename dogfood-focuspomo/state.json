@@ -31,27 +31,27 @@
     "touch/pointer gesture fallback audit for Summary and running timer",
     "TypeScript gate after layout/gesture fixes",
     "build + PM2 restart + local/public HTTP verification after layout/gesture fixes",
-    "public root/SW/static/icon verification after layout/gesture deploy"
+    "public root/SW/static/icon verification after layout/gesture deploy",
+    "gesture scope regression: tasks page vertical swipe disabled",
+    "keyboard ArrowUp scope restricted to timer page"
   ],
   "next_steps": [
     "real iPad installed-PWA verification",
     "count-up mode",
     "visual parity against App Store screenshots"
   ],
-  "updated_at": "2026-05-28T17:12:26+08:00",
+  "updated_at": "2026-05-28T17:22:37+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
     "browser_tool_status": "fallback_source_curl_pm2",
-    "new_issues_found": 2,
+    "new_issues_found": 1,
     "new_issue_ids": [
-      "P0-7",
-      "P0-8"
+      "P1-14"
     ],
     "code_changes_this_round": true,
     "fixed_this_round": [
-      "P0-7",
-      "P0-8"
+      "P1-14"
     ],
     "typescript_no_emit_passed": true,
     "build_passed": true,
@@ -68,12 +68,14 @@
     "timer_idle_square_layout_guard": true,
     "summary_touch_fallback_present": true,
     "running_swipe_down_home_present": true,
-    "notes": "Browser toolset was unavailable in this runtime, so verification used source audit, curl with browser-like probes, TypeScript, build, PM2 and live asset/icon probes."
+    "notes": "Browser toolset was unavailable in this runtime, so verification used source audit, curl with browser-like probes, TypeScript, build, PM2 and live asset/icon probes.",
+    "tasks_page_vertical_summary_swipe_disabled": true,
+    "arrow_up_summary_timer_only": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "P0-7/P0-8 layout and gesture fixes deployed; TypeScript, build, PM2 restart, local/public HTTP, live SW/static/icon probes passed."
+  "last_verification_note": "P1-14 gesture scope fixed/deployed; tasks page no longer has vertical Summary swipe, ArrowUp opens Summary only on timer page; build, PM2 restart, local/public HTTP, live static asset probes passed."
 }

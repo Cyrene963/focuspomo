@@ -316,5 +316,15 @@
     "status": "fixed_deployed",
     "fixed_at": "2026-05-28T17:12:26+08:00",
     "fix_summary": "GestureWrapper 增加 touchstart/touchend fallback，并支持 touchAction prop；Summary 页面设置 touchAction=none 让下滑关闭优先；运行中计时页增加纵向下滑分支，取消当前专注/休息并回到主页计时状态。滚动面板内部已滚动时仍让原生滚动优先。"
+  },
+  {
+    "id": "P1-14",
+    "severity": "P1",
+    "category": "Gesture/Navigation",
+    "title": "任务/今日三件事页上滑也会跳转 Summary，纵向手势范围过宽",
+    "evidence": "用户反馈今日三件事页面下滑/纵向手势也会跳转到 summary；产品语义应是只有主页计时器页面可以有上滑/下滑操作。源码确认 AppShell 给 tasks 页也挂了 onSwipeUp={() => go(\"summary\")}，并且 ArrowUp 全局跳 Summary。",
+    "status": "fixed_deployed",
+    "fixed_at": "2026-05-28T17:22:37+08:00",
+    "fix_summary": "移除 tasks 页 onSwipeUp；键盘 ArrowUp 只在 page === \"timer\" 时进入 Summary，ArrowDown/Escape 只在 page === \"summary\" 时返回 timer。左右滑/左右键仍保持页面横向导航。"
   }
 ]

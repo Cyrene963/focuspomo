@@ -67,3 +67,30 @@
 1. 真 iPad installed-PWA 离线复测：确认旧 PWA 是否拿到 `pwa8` 与新 app shell。
 2. 正计时模式（App Store 基准功能）。
 3. 继续按 App Store 截图做逐屏视觉/动效还原，避免 AI 味大卡片/过度渐变。
+
+## 2026-05-28T17:22:37+08:00 用户反馈修复：任务页不应纵向跳 Summary
+
+问题：
+- 今日三件事/任务页也能通过纵向手势跳到 Summary。
+- 这违背了产品语义：只有主页计时器页面才应该有上滑/下滑操作；任务页是工作页，纵向动作应优先给滚动和操作本身。
+
+根因：
+- `AppShell` 给 tasks 页也挂了 `onSwipeUp={() => go("summary")}`。
+- 键盘 `ArrowUp` 也是全局进入 Summary，不限当前页面。
+
+修复：
+- 移除 tasks 页的 `onSwipeUp`。
+- `ArrowUp` 只在 `page === "timer"` 时进入 Summary。
+- `ArrowDown` / `Escape` 只在 Summary 页返回 timer。
+- 左右滑和左右键仍保持当前页相对横向导航。
+
+验证：
+- 源码断言：tasks 页面 wrapper 中不再包含 `onSwipeUp`。
+- 源码断言：全局只剩 timer 页一个 `onSwipeUp={() => go("summary")}`。
+- 源码断言：`ArrowUp` 条件包含 `page === "timer"`。
+- `npx tsc --noEmit`：通过。
+- `npm run build`：通过，并注入 12 个 Next static assets 到 `sw.js`。
+- `pm2 restart focuspomo --update-env`：成功。
+- 本地首页：200。
+- 线上首页：200。
+- 线上首页引用的 9 个 `_next/static` assets：全部 200。

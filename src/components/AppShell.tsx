@@ -55,18 +55,17 @@ export default function AppShell() {
     };
   }, []);
 
-  // Keyboard mirrors gestures exactly: ↑ = open summary, ↓/Esc = return to timer.
+  // Keyboard mirrors page gestures. Vertical summary gestures are timer-only.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") { e.preventDefault(); go("summary"); }
-      if (e.key === "ArrowDown") { e.preventDefault(); go("timer"); }
+      if (e.key === "ArrowUp" && page === "timer") { e.preventDefault(); go("summary"); }
+      if ((e.key === "ArrowDown" || e.key === "Escape") && page === "summary") { e.preventDefault(); go("timer"); }
       if (e.key === "ArrowLeft") { e.preventDefault(); swipeLeft(); }
       if (e.key === "ArrowRight") { e.preventDefault(); swipeRight(); }
-      if (e.key === "Escape") { e.preventDefault(); go("timer"); }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [go, swipeLeft, swipeRight]);
+  }, [page, go, swipeLeft, swipeRight]);
 
   return (
     <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
@@ -91,7 +90,6 @@ export default function AppShell() {
           <GestureWrapper key="tasks" enterX={-60} enterY={0}
             onSwipeLeft={swipeLeft}
             onSwipeRight={swipeRight}
-            onSwipeUp={() => go("summary")}
           >
             <TasksPage />
           </GestureWrapper>
