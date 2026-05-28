@@ -18,9 +18,19 @@ type SyncRequest = {
   enabled?: boolean;
 };
 
+function calendarAuthError() {
+  const err = new Error("Calendar permission is not connected");
+  (err as Error & { status?: number; code?: string }).status = 428;
+  (err as Error & { status?: number; code?: string }).code = "calendar_permission_required";
+  return err;
+}
+
 function apiError(err: unknown) {
   const status = typeof err === "object" && err && "status" in err ? Number((err as { status?: number }).status) : 500;
-  return NextResponse.json({ error: status === 401 ? "Not signed in" : "Calendar sync failed" }, { status: Number.isFinite(status) ? status : 500 });
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code?: string }).code) : undefined;
+  if (status === 401) return NextResponse.json({ error: "Not signed in", code: "not_signed_in" }, { status: 401 });
+  if (status === 428) return NextResponse.json({ error: "Calendar permission required", code: code || "calendar_permission_required" }, { status: 428 });
+  return NextResponse.json({ error: "Calendar sync failed", code: code || "calendar_sync_failed" }, { status: Number.isFinite(status) ? status : 500 });
 }
 
 function validRecord(record: CalendarRecord) {
@@ -37,15 +47,25 @@ function validRecord(record: CalendarRecord) {
   );
 }
 
+async function hasCalendarPermission(userId: string) {
+  const { rows } = await getPool().query(
+    "SELECT refresh_token, calendar_sync_enabled FROM focuspomo_users WHERE id = $1",
+    [userId]
+  );
+  return Boolean(rows[0]?.refresh_token && rows[0]?.calendar_sync_enabled);
+}
+
 export async function POST(req: Request) {
   try {
     const user = await requireSessionUser();
     const body = (await req.json()) as SyncRequest;
     if (typeof body.enabled === "boolean") {
+      if (body.enabled && !(await hasCalendarPermission(user.id))) throw calendarAuthError();
       await getPool().query("UPDATE focuspomo_users SET calendar_sync_enabled = $2, updated_at = now() WHERE id = $1", [user.id, body.enabled]);
     }
     const enabled = body.enabled ?? user.calendarSyncEnabled;
     if (!enabled) return NextResponse.json({ ok: true, enabled: false, synced: 0, skipped: 0 });
+    if (!(await hasCalendarPermission(user.id))) throw calendarAuthError();
 
     const records = (body.records || []).filter(validRecord).slice(0, 100);
     if (records.length === 0) return NextResponse.json({ ok: true, enabled: true, synced: 0, skipped: 0 });

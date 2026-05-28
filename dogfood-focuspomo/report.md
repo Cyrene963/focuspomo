@@ -185,3 +185,32 @@
 Google Console 需要确认：
 - Authorized redirect URIs 必须包含：`https://focuspomo.bz9.me/api/auth/callback/google`
 - 如果还想兼容旧链接，也可额外包含：`https://focuspomo.bz9.me/api/auth/google/callback`
+
+## 2026-05-28T20:10:44+08:00 Google 登录与 Calendar 授权拆分
+
+用户目标：当前主要需要云同步功能，不希望 Google Calendar verification 阻塞整个登录/云备份能力。
+
+问题：
+- 原先 `/api/auth/google` 登录时直接请求 `calendar.events`。
+- Google OAuth app 处于 Testing / 未完成 verification 时，Calendar scope 会让普通登录也被 403 `access_denied` 拦住。
+- 这会把“云备份/恢复”错误地绑定到“Calendar 写入权限”。
+
+修复：
+- 基础登录 `/api/auth/google` 现在只请求 `openid email profile`。
+- 新增 `/api/auth/google/calendar`，只在用户开启 Calendar 同步时才请求 `calendar.events`，并带 `state=calendar`。
+- OAuth callback 根据 `state=calendar` 区分普通登录与 Calendar 增量授权。
+- Calendar 授权成功后才开启 `calendar_sync_enabled`。
+- `/api/calendar/sync` 在缺少 Calendar 授权时返回 `428 calendar_permission_required`，前端会跳转到单独 Calendar 授权。
+- 未登录时仍返回 401，避免误触发授权流程。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `npm run build`：通过，routes 包含 `/api/auth/google/calendar`。
+- `pm2 restart focuspomo --update-env`：成功。
+- 公网 `/api/auth/google` Location 解析：scope = `openid email profile`，不包含 Calendar。
+- 公网 `/api/auth/google/calendar` Location 解析：scope 包含 `calendar.events`，state = `calendar`。
+- 未登录 POST `/api/calendar/sync` 返回 401，符合认证边界。
+
+产品结论：
+- 云备份/恢复可先作为主线能力上线。
+- Calendar 同步作为可选增强能力，后续需要公开给多人时再处理 Google verification，不再挡住基础云同步。

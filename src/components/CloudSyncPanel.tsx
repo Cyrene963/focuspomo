@@ -125,8 +125,15 @@ export default function CloudSyncPanel() {
         calendarEnabled: res.enabled,
         message: res.enabled ? `Calendar 已同步 ${res.synced} 条，跳过 ${res.skipped} 条重复记录` : "Calendar 同步已关闭",
       }));
-    } catch {
-      setState(s => ({ ...s, busy: false, message: "Calendar 同步失败，请确认 Google 授权包含日历权限" }));
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "";
+      const needsCalendarConsent = text.includes("calendar_permission_required") || text.includes("428");
+      setState(s => ({
+        ...s,
+        busy: false,
+        message: needsCalendarConsent ? "需要先单独授权 Google Calendar" : "Calendar 同步失败，请稍后再试",
+      }));
+      if (needsCalendarConsent && enabled) window.location.href = "/api/auth/google/calendar";
     }
   };
 
@@ -143,7 +150,7 @@ export default function CloudSyncPanel() {
       <div style={{ padding: 18, display: "grid", gap: 12 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 850, color: "var(--text)" }}>Google 云同步</div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>登录后可以备份本机任务、番茄记录，并把完成的专注块写进 Google Calendar。</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>登录后可以备份本机任务、番茄记录；Google Calendar 会在登录后单独授权。</div>
         </div>
         <a href="/api/auth/google" className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</a>
         {state.message && <div style={{ fontSize: 12, color: "var(--text-sec)" }}>{state.message}</div>}

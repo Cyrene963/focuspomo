@@ -2,10 +2,14 @@ import { google } from "googleapis";
 import { type Credentials } from "google-auth-library";
 import { getPool } from "@/lib/server/db";
 
-export const GOOGLE_SCOPES = [
+export const GOOGLE_SIGN_IN_SCOPES = [
   "openid",
   "email",
   "profile",
+];
+
+export const GOOGLE_CALENDAR_SCOPES = [
+  ...GOOGLE_SIGN_IN_SCOPES,
   "https://www.googleapis.com/auth/calendar.events",
 ];
 
@@ -33,7 +37,17 @@ export function googleAuthUrl() {
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: true,
-    scope: GOOGLE_SCOPES,
+    scope: GOOGLE_SIGN_IN_SCOPES,
+  });
+}
+
+export function googleCalendarAuthUrl() {
+  return googleClient().generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    include_granted_scopes: true,
+    scope: GOOGLE_CALENDAR_SCOPES,
+    state: "calendar",
   });
 }
 
@@ -60,6 +74,13 @@ export async function upsertGoogleUser(tokens: Credentials) {
     [data.id, data.email, data.name || null, data.picture || null, tokens.access_token || null, tokens.refresh_token || null, expiresAt]
   );
   return rows[0].id as string;
+}
+
+export async function enableCalendarSync(userId: string) {
+  await getPool().query(
+    "UPDATE focuspomo_users SET calendar_sync_enabled = true, updated_at = now() WHERE id = $1",
+    [userId]
+  );
 }
 
 export async function authForUser(userId: string) {
