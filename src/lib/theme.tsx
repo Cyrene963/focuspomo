@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { writeLocalRawSnapshotKey } from "@/lib/cloudSync";
 
 type Theme = "light" | "dark";
 const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "light", toggle: () => {} });
@@ -17,7 +18,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    try { localStorage.setItem("fp-theme", theme); } catch {}
+    try { writeLocalRawSnapshotKey("fp-theme", theme); } catch {}
   }, [theme]);
 
   return (

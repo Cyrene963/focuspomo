@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { applySnapshot, hasUsefulLocalSnapshot, jsonFetch, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
+import { applySnapshot, hasUsefulLocalSnapshot, jsonFetch, LOCAL_PERSIST_EVENT, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
 
 type CloudSnapshotResponse = {
   snapshot: {
@@ -54,6 +54,7 @@ export default function CloudSyncAgent() {
   const cloudSignature = useRef("");
   const lastUploadedSignature = useRef("");
   const lastCalendarSignature = useRef("");
+  const [persistVersion, setPersistVersion] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -103,6 +104,12 @@ export default function CloudSyncAgent() {
   }, []);
 
   useEffect(() => {
+    const onPersist = () => setPersistVersion(v => v + 1);
+    window.addEventListener(LOCAL_PERSIST_EVENT, onPersist);
+    return () => window.removeEventListener(LOCAL_PERSIST_EVENT, onPersist);
+  }, []);
+
+  useEffect(() => {
     if (!hydrated.current) return;
     const snapshot = readSnapshot({ touch: true });
     const signature = snapshotSignature(snapshot);
@@ -120,7 +127,7 @@ export default function CloudSyncAgent() {
     }, 2000);
 
     return () => window.clearTimeout(timer);
-  }, [history, tasks, tags, selectedTag, cycleCount, harvestedTomatoes, pomodoroCycle, shortBreak, longBreak, muted, notificationsEnabled, vibration, use24HourTime, displayTomatoes, tiltTomatoes]);
+  }, [persistVersion, history, tasks, tags, selectedTag, cycleCount, harvestedTomatoes, pomodoroCycle, shortBreak, longBreak, muted, notificationsEnabled, vibration, use24HourTime, displayTomatoes, tiltTomatoes]);
 
   useEffect(() => {
     const completed = history.filter(r => r.completed && r.actualDuration >= 60);

@@ -18,6 +18,28 @@ export const SNAPSHOT_KEYS = [
 ] as const;
 
 export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
+export const LOCAL_PERSIST_EVENT = "focuspomo:local-persist";
+
+export function isSnapshotKey(key: string): key is typeof SNAPSHOT_KEYS[number] {
+  return SNAPSHOT_KEYS.includes(key as typeof SNAPSHOT_KEYS[number]);
+}
+
+export function writeLocalSnapshotKey(key: typeof SNAPSHOT_KEYS[number], value: unknown) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, JSON.stringify(value));
+  window.dispatchEvent(new CustomEvent(LOCAL_PERSIST_EVENT, { detail: { key } }));
+}
+
+export function writeLocalRawSnapshotKey(key: typeof SNAPSHOT_KEYS[number], value: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, value);
+  window.dispatchEvent(new CustomEvent(LOCAL_PERSIST_EVENT, { detail: { key } }));
+}
+
+export function writeClientUpdatedAt(updatedAt: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CLIENT_UPDATED_AT_KEY, String(updatedAt));
+}
 
 export type Snapshot = Record<string, unknown>;
 
@@ -38,7 +60,7 @@ export function readSnapshot(options: { touch?: boolean } = {}): Snapshot {
     } catch {}
   }
   const updatedAt = options.touch ? Date.now() : localClientUpdatedAt();
-  if (options.touch) window.localStorage.setItem(CLIENT_UPDATED_AT_KEY, String(updatedAt));
+  if (options.touch) writeClientUpdatedAt(updatedAt);
   data[CLIENT_UPDATED_AT_KEY] = updatedAt;
   return data;
 }
@@ -59,13 +81,13 @@ export function hasUsefulLocalSnapshot(data: Snapshot) {
 export function applySnapshot(data: Snapshot) {
   if (typeof window === "undefined") return;
   for (const [key, value] of Object.entries(data)) {
-    if (SNAPSHOT_KEYS.includes(key as typeof SNAPSHOT_KEYS[number])) {
-      try { window.localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    if (isSnapshotKey(key)) {
+      try { writeLocalSnapshotKey(key, value); } catch {}
     }
   }
   const rawUpdatedAt = data[CLIENT_UPDATED_AT_KEY];
   if (typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt)) {
-    window.localStorage.setItem(CLIENT_UPDATED_AT_KEY, String(rawUpdatedAt));
+    writeClientUpdatedAt(rawUpdatedAt);
   }
   window.location.reload();
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { writeLocalSnapshotKey, type SNAPSHOT_KEYS } from "@/lib/cloudSync";
 
 export type TimerState = 'idle' | 'running' | 'completed';
 export type TimerSession = 'focus' | 'shortBreak' | 'longBreak';
@@ -119,8 +120,8 @@ function loadJSON<T>(key: string, fallback: T): T {
   try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }
   catch { return fallback; }
 }
-function saveJSON(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+function saveJSON(key: typeof SNAPSHOT_KEYS[number], val: unknown) {
+  try { writeLocalSnapshotKey(key, val); } catch {}
 }
 
 const DEFAULT_TAGS: Tag[] = [

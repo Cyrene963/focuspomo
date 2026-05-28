@@ -284,3 +284,31 @@ Google Console 需要确认：
 待真机/账号确认：
 - 需要用户在真实 Google consent 完成一次 callback，确认 `Set-Cookie` 在 iOS PWA 中以 `.bz9.me` 域保留，并且从 `pomofocus.bz9.me` PWA 回来仍显示账号。
 - iOS 传感器权限不保证永久保存；预期体验是设置会同步，打开 PWA 后如系统要求仍需点一次“重新授权倾斜”。
+
+## 2026-05-29T00:08:00+08:00 云同步覆盖矩阵复核
+
+用户风险提醒：刷新网页、换设备、清理缓存、换浏览器后，应该保住所有该云同步的数据。
+
+复核方法：
+- 机械扫描源码中所有 `fp-*` 本地持久 key。
+- 与 `src/lib/cloudSync.ts` 的 `SNAPSHOT_KEYS` 做差集。
+- 复核自动上传触发逻辑，不只看 key 是否出现在快照里。
+
+结果：
+- 用户数据 key 共 16 个，云同步 snapshot key 共 16 个，差集 0。
+- 已覆盖：标签、当前标签、专注历史、番茄池、周期计数、To-Do 任务、番茄循环、短休息、长休息、静音、通知偏好、震动、24 小时制、显示番茄、倾斜番茄、主题。
+- `fp-client-updated-at` 是同步元数据，不作为用户数据上传。
+- `focuspomo-*` 字符串只是 DOM shell id，不是 localStorage 数据。
+
+发现并修复：
+- `fp-theme` 已在快照表中，但主题切换不走 Zustand store，旧逻辑不会触发自动上传；只有之后再改任务/设置或手动上传才会带上主题。
+- 新增 `LOCAL_PERSIST_EVENT`，所有 snapshot key 写入时统一发 `focuspomo:local-persist`。
+- `CloudSyncAgent` 监听该事件并延迟上传，未来新增本地持久 key 只要进入 `SNAPSHOT_KEYS` 且走统一写入函数，就不会再漏触发。
+
+验证：
+- key 覆盖脚本：`missing_from_cloud_snapshot: []`，16/16 覆盖。
+- `npx tsc --noEmit` 通过。
+- `npm run build` 通过，service worker precache 已注入 12 个 Next 静态资源。
+- 线上 `focuspomo.bz9.me` / `pomofocus.bz9.me` 首页均 200。
+- 未登录 `/api/sync` GET/PUT 均 401，边界正常。
+- OAuth state 仍正确保留 `returnTo` 域名。
