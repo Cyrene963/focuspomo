@@ -13,6 +13,10 @@ function baseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
 }
 
+export function googleRedirectUri() {
+  return `${baseUrl()}/api/auth/callback/google`;
+}
+
 export function googleClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -20,7 +24,7 @@ export function googleClient() {
   return new google.auth.OAuth2(
     clientId,
     clientSecret,
-    `${baseUrl()}/api/auth/google/callback`
+    googleRedirectUri()
   );
 }
 

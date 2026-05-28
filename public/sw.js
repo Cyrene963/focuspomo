@@ -6,17 +6,17 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
-  "/_next/static/5fz7F9wZJrHjmCgVBQAji/_buildManifest.js",
-  "/_next/static/5fz7F9wZJrHjmCgVBQAji/_clientMiddlewareManifest.js",
-  "/_next/static/5fz7F9wZJrHjmCgVBQAji/_ssgManifest.js",
+  "/_next/static/4yEuOcoge4mscKV0iaIlw/_buildManifest.js",
+  "/_next/static/4yEuOcoge4mscKV0iaIlw/_clientMiddlewareManifest.js",
+  "/_next/static/4yEuOcoge4mscKV0iaIlw/_ssgManifest.js",
   "/_next/static/chunks/03cnjj9mnzy_p.js",
   "/_next/static/chunks/03~yq9q893hmn.js",
   "/_next/static/chunks/0_3__-jm3hi4a.js",
   "/_next/static/chunks/0ht900cau6_ur.js",
   "/_next/static/chunks/0l0v.u5dvusae.js",
   "/_next/static/chunks/0wb6jdvd3md34.js",
+  "/_next/static/chunks/0~-2ek~94pk~7.css",
   "/_next/static/chunks/10alx5.du6frt.js",
-  "/_next/static/chunks/12-wn4~9~rzgw.css",
   "/_next/static/chunks/turbopack-17vrofky5om_c.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__

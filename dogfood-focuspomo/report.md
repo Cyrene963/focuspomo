@@ -155,3 +155,33 @@
 
 待真机验证：
 - 在 iPad Safari/PWA 上点一次 `开启倾斜番茄`，允许动作与方向访问后，倾斜设备观察红番茄是否滚动。
+
+## 2026-05-28T19:08:14+08:00 Google OAuth invalid request redirect_uri 修复
+
+用户反馈：Google 登录页显示 `this app sent an invalid request`。
+
+定位：
+- 线上 `/api/auth/google` 实际发给 Google 的旧 `redirect_uri` 是 `https://focuspomo.bz9.me/api/auth/google/callback`。
+- 这类报错最常见原因是 Google Cloud Console 的 Authorized redirect URI 与请求里的 `redirect_uri` 完全不一致。
+- 为了贴近 NextAuth/常见配置，改成标准路径 `https://focuspomo.bz9.me/api/auth/callback/google`。
+
+修复：
+- `googleClient()` 的 redirect URI 改为 `/api/auth/callback/google`。
+- 新增 `/api/auth/callback/google` callback route。
+- 保留 `/api/auth/google/callback` 作为旧路径兼容入口。
+- callback 逻辑抽到 `src/lib/server/googleCallback.ts`，避免两条路径复制不同步。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `npm run build`：通过，routes 包含 `/api/auth/callback/google` 和 `/api/auth/google/callback`。
+- `pm2 restart focuspomo --update-env`：成功。
+- 公网 `/api/auth/google` Location 解析结果：
+  - client_id = 用户提供的 `1030792488504-...apps.googleusercontent.com`
+  - redirect_uri = `https://focuspomo.bz9.me/api/auth/callback/google`
+  - scope 包含 `https://www.googleapis.com/auth/calendar.events`
+- 新旧 callback probe 都返回 307，不再 404。
+- 公网首页 200。
+
+Google Console 需要确认：
+- Authorized redirect URIs 必须包含：`https://focuspomo.bz9.me/api/auth/callback/google`
+- 如果还想兼容旧链接，也可额外包含：`https://focuspomo.bz9.me/api/auth/google/callback`

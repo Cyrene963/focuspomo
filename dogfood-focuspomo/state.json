@@ -41,14 +41,16 @@
     "PM2 .env.local server-secret loading without git tracking",
     "persistent harvested tomato physics world",
     "iPad motion permission button and devicemotion/deviceorientation gravity path",
-    "tomato physics survives navigation away from and back to timer page"
+    "tomato physics survives navigation away from and back to timer page",
+    "Google OAuth redirect URI mismatch repair",
+    "standard callback path compatibility"
   ],
   "next_steps": [
     "real iPad installed-PWA verification",
     "count-up mode",
     "visual parity against App Store screenshots"
   ],
-  "updated_at": "2026-05-28T18:57:34+08:00",
+  "updated_at": "2026-05-28T19:08:14+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -94,12 +96,19 @@
     "deviceorientation_gravity_fallback_present": true,
     "public_next_static_assets_all_200_after_physics_fix": true,
     "build_passed_after_physics_fix": true,
-    "pm2_restart_passed_after_physics_fix": true
+    "pm2_restart_passed_after_physics_fix": true,
+    "google_oauth_redirect_uri_standard_callback": true,
+    "google_oauth_client_id_matches_user_provided": true,
+    "google_oauth_calendar_scope_present_after_redirect_fix": true,
+    "old_google_callback_path_compatibility": true,
+    "new_google_callback_path_present": true,
+    "build_passed_after_oauth_redirect_fix": true,
+    "pm2_restart_passed_after_oauth_redirect_fix": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "Fixed tomato physics persistence and iPad tilt activation: TomatoPhysics is globally mounted in AppShell, completed focus sessions append persistent fp-harvested-tomatoes, cloud sync includes that key, and the physics layer exposes an explicit tilt permission button using devicemotion plus deviceorientation fallback. Verified by TypeScript, production build, PM2 restart, local/public HTTP 200, public asset checks, source mount assertions, and bundle string checks. Real iPad sensor behavior still requires tapping the permission button on device."
+  "last_verification_note": "Fixed Google OAuth invalid-request risk by changing generated redirect_uri to https://focuspomo.bz9.me/api/auth/callback/google and keeping /api/auth/google/callback as a compatibility route. Verified TypeScript, build, PM2 restart, public auth Location parsing, client_id, redirect_uri, calendar scope, both callback probes, and public root 200."
 }
