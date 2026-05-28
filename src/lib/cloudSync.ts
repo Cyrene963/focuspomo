@@ -14,6 +14,7 @@ export const SNAPSHOT_KEYS = [
   "fp-24-hour-time",
   "fp-display-tomatoes",
   "fp-tilt-tomatoes",
+  "fp-active-timer",
   "fp-theme",
 ] as const;
 

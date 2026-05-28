@@ -6,18 +6,18 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
-  "/_next/static/UJ6wWCss4QRTtyWsIHgrG/_buildManifest.js",
-  "/_next/static/UJ6wWCss4QRTtyWsIHgrG/_clientMiddlewareManifest.js",
-  "/_next/static/UJ6wWCss4QRTtyWsIHgrG/_ssgManifest.js",
   "/_next/static/chunks/03cnjj9mnzy_p.js",
   "/_next/static/chunks/03~yq9q893hmn.js",
-  "/_next/static/chunks/0hm5epgg8m73m.js",
   "/_next/static/chunks/0ht900cau6_ur.js",
+  "/_next/static/chunks/0k78.o3~_~qhe.js",
   "/_next/static/chunks/0l0v.u5dvusae.js",
-  "/_next/static/chunks/0lpzwdnfjf490.js",
+  "/_next/static/chunks/0uisdadxw9e3t.js",
   "/_next/static/chunks/0wb6jdvd3md34.js",
   "/_next/static/chunks/0~-2ek~94pk~7.css",
-  "/_next/static/chunks/turbopack-17vrofky5om_c.js"
+  "/_next/static/chunks/turbopack-17vrofky5om_c.js",
+  "/_next/static/uBqTz6K9oHGe4wZwOHsMv/_buildManifest.js",
+  "/_next/static/uBqTz6K9oHGe4wZwOHsMv/_clientMiddlewareManifest.js",
+  "/_next/static/uBqTz6K9oHGe4wZwOHsMv/_ssgManifest.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 

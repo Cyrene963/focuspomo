@@ -49,6 +49,14 @@ export interface TaskItem {
   dueDate?: number;
 }
 
+interface ActiveTimerSnapshot {
+  state: 'running';
+  session: TimerSession;
+  tagId: string;
+  activeDuration: number;
+  startTime: number;
+}
+
 interface Store {
   // Navigation
   page: Page;
@@ -124,6 +132,62 @@ function saveJSON(key: typeof SNAPSHOT_KEYS[number], val: unknown) {
   try { writeLocalSnapshotKey(key, val); } catch {}
 }
 
+function clearActiveTimer() {
+  saveJSON('fp-active-timer', null);
+}
+
+function saveActiveTimer(snapshot: ActiveTimerSnapshot) {
+  saveJSON('fp-active-timer', snapshot);
+}
+
+function buildCompletedRecord(tag: Tag, activeDuration: number, startTime: number): PomodoroRecord {
+  return {
+    id: crypto.randomUUID(),
+    tagId: tag.id,
+    tagName: tag.name,
+    tagColor: tag.color,
+    plannedDuration: activeDuration,
+    actualDuration: activeDuration,
+    startTime,
+    endTime: startTime + activeDuration * 1000,
+    completed: true,
+  };
+}
+
+function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activeDuration: number) {
+  const history = loadJSON<PomodoroRecord[]>('fp-history', []);
+  const endTime = snapshot.startTime + activeDuration * 1000;
+  const alreadyRecorded = history.some(record => record.completed && Math.abs(record.endTime - endTime) < 1000);
+  if (!alreadyRecorded) {
+    const record = buildCompletedRecord(tag, activeDuration, snapshot.startTime);
+    const nextHistory = [...history, record];
+    saveJSON('fp-history', nextHistory);
+    const tomatoes = [...loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []), { id: record.id, completed: true, durationSeconds: activeDuration, collectedAt: record.endTime }].slice(-50);
+    saveJSON('fp-harvested-tomatoes', tomatoes);
+    saveJSON('fp-cycle-count', loadJSON('fp-cycle-count', 0) + 1);
+  }
+  clearActiveTimer();
+}
+
+function restoredTimer(tags: Tag[], fallbackTag: Tag) {
+  const snapshot = loadJSON<ActiveTimerSnapshot | null>('fp-active-timer', null);
+  if (!snapshot || snapshot.state !== 'running' || !Number.isFinite(snapshot.startTime) || !Number.isFinite(snapshot.activeDuration)) return null;
+  const activeDuration = Math.max(60, Math.min(12 * 60 * 60, Math.round(snapshot.activeDuration)));
+  const elapsed = Math.max(0, Math.floor((Date.now() - snapshot.startTime) / 1000));
+  const tag = tags.find(t => t.id === snapshot.tagId) || fallbackTag;
+  const remaining = Math.max(activeDuration - elapsed, 0);
+  if (remaining <= 0) {
+    if (snapshot.session === 'focus') restoreExpiredFocusTimer(snapshot, tag, activeDuration);
+    else clearActiveTimer();
+    return null;
+  }
+  return {
+    snapshot: { ...snapshot, activeDuration, tagId: tag.id },
+    tag,
+    remaining,
+  };
+}
+
 const DEFAULT_TAGS: Tag[] = [
   { id: 'focus', name: '专注', color: '#E07A45', duration: 25 * 60 },
   { id: 'work', name: '工作', color: '#55A67A', duration: 60 * 60 },
@@ -136,17 +200,18 @@ const DEFAULT_TAGS: Tag[] = [
 const savedTags = loadJSON<Tag[]>('fp-tags', DEFAULT_TAGS);
 const savedTag = loadJSON<{ id: string }>('fp-selected-tag', { id: 'focus' });
 const initTag = savedTags.find(t => t.id === savedTag.id) || savedTags[0];
+const initRestoredTimer = restoredTimer(savedTags, initTag);
 
 export const useStore = create<Store>((set, get) => ({
   page: 'timer',
   setPage: (p) => set({ page: p }),
 
-  state: 'idle',
-  selectedTag: initTag,
-  session: 'focus',
-  activeDuration: initTag.duration,
-  remaining: initTag.duration,
-  startTime: null,
+  state: initRestoredTimer && initRestoredTimer.remaining > 0 ? 'running' : 'idle',
+  selectedTag: initRestoredTimer?.tag || initTag,
+  session: initRestoredTimer?.snapshot.session || 'focus',
+  activeDuration: initRestoredTimer?.snapshot.activeDuration || initTag.duration,
+  remaining: initRestoredTimer?.remaining || initTag.duration,
+  startTime: initRestoredTimer && initRestoredTimer.remaining > 0 ? initRestoredTimer.snapshot.startTime : null,
   muted: loadJSON('fp-muted', false),
   notificationsEnabled: loadJSON('fp-notifications-enabled', false),
 
@@ -185,50 +250,60 @@ export const useStore = create<Store>((set, get) => ({
 
   start: () => {
     const { selectedTag } = get();
-    set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: Date.now() });
+    const startTime = Date.now();
+    saveActiveTimer({ state: 'running', session: 'focus', tagId: selectedTag.id, activeDuration: selectedTag.duration, startTime });
+    set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime });
   },
   startBreak: () => {
-    const { shortBreak, longBreak, cycleCount, pomodoroCycle } = get();
+    const { shortBreak, longBreak, cycleCount, pomodoroCycle, selectedTag } = get();
     const useLongBreak = cycleCount > 0 && cycleCount % Math.max(1, pomodoroCycle) === 0;
+    const session = useLongBreak ? 'longBreak' : 'shortBreak';
     const duration = useLongBreak ? longBreak : shortBreak;
+    const startTime = Date.now();
+    saveActiveTimer({ state: 'running', session, tagId: selectedTag.id, activeDuration: duration, startTime });
     set({
       state: 'running',
-      session: useLongBreak ? 'longBreak' : 'shortBreak',
+      session,
       activeDuration: duration,
       remaining: duration,
-      startTime: Date.now(),
+      startTime,
     });
   },
   complete: () => {
     const { selectedTag, startTime, history, cycleCount, session, activeDuration } = get();
     if (session !== 'focus') {
+      clearActiveTimer();
       set({ state: 'completed', remaining: 0, startTime: null });
       return;
     }
     const now = Date.now();
-    const record: PomodoroRecord = {
-      id: crypto.randomUUID(),
-      tagId: selectedTag.id,
-      tagName: selectedTag.name,
-      tagColor: selectedTag.color,
-      plannedDuration: activeDuration,
-      actualDuration: startTime ? Math.round((now - startTime) / 1000) : activeDuration,
-      startTime: startTime || now - activeDuration * 1000,
-      endTime: now,
-      completed: true,
-    };
+    const record: PomodoroRecord = startTime
+      ? buildCompletedRecord(selectedTag, activeDuration, startTime)
+      : {
+          id: crypto.randomUUID(),
+          tagId: selectedTag.id,
+          tagName: selectedTag.name,
+          tagColor: selectedTag.color,
+          plannedDuration: activeDuration,
+          actualDuration: activeDuration,
+          startTime: now - activeDuration * 1000,
+          endTime: now,
+          completed: true,
+        };
     const h = [...history, record];
     saveJSON('fp-history', h);
-    const tomato: HarvestedTomato = { id: record.id, completed: true, durationSeconds: activeDuration, collectedAt: now };
+    const tomato: HarvestedTomato = { id: record.id, completed: true, durationSeconds: activeDuration, collectedAt: record.endTime };
     const tomatoes = [...get().harvestedTomatoes, tomato].slice(-50);
     saveJSON('fp-harvested-tomatoes', tomatoes);
     const nextCycleCount = cycleCount + 1;
     saveJSON('fp-cycle-count', nextCycleCount);
-    set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount });
+    clearActiveTimer();
+    set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount, startTime: null });
   },
   interrupt: () => {
     const { selectedTag, startTime, history, session, activeDuration } = get();
     if (session !== 'focus') {
+      clearActiveTimer();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
       return;
     }
@@ -247,12 +322,15 @@ export const useStore = create<Store>((set, get) => ({
       };
       const h = [...history, record];
       saveJSON('fp-history', h);
+      clearActiveTimer();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, history: h });
     } else {
+      clearActiveTimer();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
     }
   },
   reset: () => {
+    clearActiveTimer();
     set({ state: 'idle', session: 'focus', activeDuration: get().selectedTag.duration, remaining: get().selectedTag.duration, startTime: null });
   },
   tick: () => {
