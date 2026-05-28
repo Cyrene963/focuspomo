@@ -25,6 +25,13 @@ export interface PomodoroRecord {
   completed: boolean;
 }
 
+export interface HarvestedTomato {
+  id: string;
+  completed: boolean;
+  durationSeconds: number;
+  collectedAt: number;
+}
+
 export interface TaskItem {
   id: string;
   title: string;
@@ -76,6 +83,7 @@ interface Store {
   // History
   history: PomodoroRecord[];
   cycleCount: number;
+  harvestedTomatoes: HarvestedTomato[];
   addManualRecord: (input: { tagId: string; startTime: number; durationSeconds: number }) => void;
 
   // Tasks
@@ -208,9 +216,12 @@ export const useStore = create<Store>((set, get) => ({
     };
     const h = [...history, record];
     saveJSON('fp-history', h);
+    const tomato: HarvestedTomato = { id: record.id, completed: true, durationSeconds: activeDuration, collectedAt: now };
+    const tomatoes = [...get().harvestedTomatoes, tomato].slice(-50);
+    saveJSON('fp-harvested-tomatoes', tomatoes);
     const nextCycleCount = cycleCount + 1;
     saveJSON('fp-cycle-count', nextCycleCount);
-    set({ state: 'completed', session: 'focus', remaining: 0, history: h, cycleCount: nextCycleCount });
+    set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount });
   },
   interrupt: () => {
     const { selectedTag, startTime, history, session, activeDuration } = get();
@@ -261,6 +272,7 @@ export const useStore = create<Store>((set, get) => ({
 
   history: loadJSON<PomodoroRecord[]>('fp-history', []),
   cycleCount: loadJSON('fp-cycle-count', 0),
+  harvestedTomatoes: loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []),
   addManualRecord: ({ tagId, startTime, durationSeconds }) => {
     const tag = get().tags.find(t => t.id === tagId) || get().selectedTag;
     const plannedDuration = Math.max(60, Math.min(12 * 60 * 60, Math.round(durationSeconds)));
@@ -278,7 +290,10 @@ export const useStore = create<Store>((set, get) => ({
     };
     const h = [...get().history, record];
     saveJSON('fp-history', h);
-    set({ history: h });
+    const tomato: HarvestedTomato = { id: record.id, completed: true, durationSeconds: plannedDuration, collectedAt: record.endTime };
+    const tomatoes = [...get().harvestedTomatoes, tomato].slice(-50);
+    saveJSON('fp-harvested-tomatoes', tomatoes);
+    set({ history: h, harvestedTomatoes: tomatoes });
   },
 
   tasks: loadJSON<TaskItem[]>('fp-tasks', []),

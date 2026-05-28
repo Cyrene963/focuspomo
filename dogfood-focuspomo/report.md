@@ -122,3 +122,36 @@
 
 剩余需要真机/账号验证：
 - 用户在浏览器中完成 Google consent 后，验证 callback 建 session、设置页显示头像邮箱、备份/恢复云端快照、完成番茄后 Google Calendar 出现对应事件。
+
+## 2026-05-28T18:57:34+08:00 物理番茄持久化 + iPad 倾斜修复
+
+用户反馈：
+- 完成番茄掉落的物理引擎没有随着 iPad 陀螺仪/倾斜移动。
+- 回到主页后成熟红番茄全部消失。
+
+根因：
+- `TomatoPhysics` 原来挂在 `TimerPage` 内；切到任务/统计/设置页时 TimerPage 卸载，Matter world 被销毁，回主页会重建一个空 world。
+- 完成番茄只通过 `dropTrigger` 发 100ms 的瞬时信号，没有持久化为“已收获番茄池”。
+- iOS/iPadOS 传感器需要用户手势触发 `DeviceMotionEvent.requestPermission()` / `DeviceOrientationEvent.requestPermission()`；自动 effect 请求不可靠，也缺少用户可见入口。
+
+修复：
+- 新增 `HarvestedTomato` store 类型和 `fp-harvested-tomatoes` localStorage key。
+- 完成专注或手动添加记录时，追加一颗持久番茄，最多保留最近 50 颗。
+- `TomatoPhysics` 改为全局挂载在 `AppShell`，不再由 `TimerPage` 拥有，页面切换不会销毁 Matter world。
+- 物理层从 store 读取番茄池，只对新增番茄创建 Matter body；刷新后会恢复最近番茄。
+- 新增 “开启倾斜番茄” 按钮；点击后请求 iPad 传感器权限，并优先用 `devicemotion.accelerationIncludingGravity` 驱动重力，`deviceorientation` 作为 fallback。
+- 云同步快照加入 `fp-harvested-tomatoes`，避免换设备后有历史记录但没有可见番茄池。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `rm -rf .next && npm run build`：通过。
+- `pm2 restart focuspomo --update-env`：成功。
+- 本地首页：200。
+- 公网首页：200。
+- 公网 9 个 `_next/static` assets：全部 200。
+- 源码断言：`<TomatoPhysics />` 只在 `AppShell` 挂载一次。
+- 源码断言：`TimerPage.tsx` 不再引用 `TomatoPhysics`。
+- 源码/Bundle 断言：`fp-harvested-tomatoes`、`requestPermission`、`devicemotion`、`deviceorientation`、`开启倾斜番茄` 均存在。
+
+待真机验证：
+- 在 iPad Safari/PWA 上点一次 `开启倾斜番茄`，允许动作与方向访问后，倾斜设备观察红番茄是否滚动。

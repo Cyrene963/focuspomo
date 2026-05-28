@@ -11,6 +11,7 @@ import SettingsPage from "@/components/SettingsPage";
 import CalendarPage from "@/components/CalendarPage";
 import TasksPage from "@/components/TasksPage";
 import SummaryPage from "@/components/SummaryPage";
+import TomatoPhysics from "@/components/TomatoPhysics";
 
 const DOT_PAGES: Page[] = ["stats", "timer", "tasks", "calendar", "settings"];
 const DOT_LABELS: Record<Page, string> = {
@@ -69,6 +70,7 @@ export default function AppShell() {
 
   return (
     <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
+      <TomatoPhysics />
       <AnimatePresence mode="wait">
         {page === "timer" && (
           <GestureWrapper key="timer" enterX={0} enterY={0}

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
 import TagSelector from "@/components/TagSelector";
-import TomatoPhysics from "@/components/TomatoPhysics";
 
 let audioCtx: AudioContext | null = null;
 function playDing(muted: boolean) {
@@ -56,7 +55,6 @@ export default function TimerPage() {
   const [holdActive, setHoldActive] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
-  const [dropTrigger, setDropTrigger] = useState<{ completed: boolean; durationSeconds: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevStateRef = useRef(state);
@@ -86,8 +84,6 @@ export default function TimerPage() {
       setTimeout(() => setShowFlash(false), 800);
       try { if (vibration && navigator.vibrate) navigator.vibrate(200); } catch {}
       notifyDone(notificationsEnabled, isBreak ? "休息结束" : "番茄完成", isBreak ? "可以回到下一轮专注了。" : `${selectedTag.name}完成了，收获一个小番茄。`);
-      if (!isBreak) setDropTrigger({ completed: true, durationSeconds: selectedTag.duration });
-      setTimeout(() => setDropTrigger(null), 100);
     }
     prevStateRef.current = state;
   }, [state, muted, vibration, notificationsEnabled, selectedTag.name, selectedTag.duration, isBreak]);
@@ -153,9 +149,6 @@ export default function TimerPage() {
         transition: "background 0.5s ease",
         zIndex: 0,
       }} />
-
-      {/* Physics engine canvas */}
-      <TomatoPhysics trigger={dropTrigger} />
 
       {/* Mute button (running only) */}
       <AnimatePresence>

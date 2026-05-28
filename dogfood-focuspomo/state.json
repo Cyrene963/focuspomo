@@ -38,14 +38,17 @@
     "local-first cloud snapshot sync API",
     "Google Calendar completed-pomodoro sync API",
     "Tonight remaining pomodoro capacity panel",
-    "PM2 .env.local server-secret loading without git tracking"
+    "PM2 .env.local server-secret loading without git tracking",
+    "persistent harvested tomato physics world",
+    "iPad motion permission button and devicemotion/deviceorientation gravity path",
+    "tomato physics survives navigation away from and back to timer page"
   ],
   "next_steps": [
     "real iPad installed-PWA verification",
     "count-up mode",
     "visual parity against App Store screenshots"
   ],
-  "updated_at": "2026-05-28T18:31:06+08:00",
+  "updated_at": "2026-05-28T18:57:34+08:00",
   "last_verification": {
     "localhost_3457": "200",
     "https_focuspomo": "200",
@@ -82,12 +85,21 @@
     "calendar_sync_api_unauthenticated_401": true,
     "focuspomo_db_tables_present": true,
     "env_local_untracked": true,
-    "tonight_capacity_panel_present": true
+    "tonight_capacity_panel_present": true,
+    "tomato_physics_mounted_once_in_appshell": true,
+    "timer_page_no_longer_owns_physics_world": true,
+    "harvested_tomatoes_localstorage_key_present": true,
+    "motion_permission_api_present_in_bundle": true,
+    "devicemotion_gravity_path_present": true,
+    "deviceorientation_gravity_fallback_present": true,
+    "public_next_static_assets_all_200_after_physics_fix": true,
+    "build_passed_after_physics_fix": true,
+    "pm2_restart_passed_after_physics_fix": true
   },
   "remaining_high_priority": [
     "Real iPad installed-PWA verification after deleting/reopening old PWA if it keeps old service worker",
     "Count-up mode",
     "Further visual parity against App Store screenshots"
   ],
-  "last_verification_note": "Google OAuth/cloud sync/Calendar sync and tonight-capacity panel deployed; TypeScript, production build, PM2 restart, local/public API probes, public static asset checks, DB table checks, and secret scan passed. Full Google callback/Calendar insert still requires user to complete Google consent in browser."
+  "last_verification_note": "Fixed tomato physics persistence and iPad tilt activation: TomatoPhysics is globally mounted in AppShell, completed focus sessions append persistent fp-harvested-tomatoes, cloud sync includes that key, and the physics layer exposes an explicit tilt permission button using devicemotion plus deviceorientation fallback. Verified by TypeScript, production build, PM2 restart, local/public HTTP 200, public asset checks, source mount assertions, and bundle string checks. Real iPad sensor behavior still requires tapping the permission button on device."
 }

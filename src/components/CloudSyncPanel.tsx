@@ -7,6 +7,7 @@ const SNAPSHOT_KEYS = [
   "fp-tags",
   "fp-selected-tag",
   "fp-history",
+  "fp-harvested-tomatoes",
   "fp-cycle-count",
   "fp-tasks",
   "fp-pomodoro-cycle",
