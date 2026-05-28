@@ -32,23 +32,39 @@ export function googleClient() {
   );
 }
 
-export function googleAuthUrl() {
+export function googleAuthUrl(returnTo?: string) {
   return googleClient().generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: true,
     scope: GOOGLE_SIGN_IN_SCOPES,
+    state: encodeOAuthState({ flow: "signin", returnTo }),
   });
 }
 
-export function googleCalendarAuthUrl() {
+export function googleCalendarAuthUrl(returnTo?: string) {
   return googleClient().generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: true,
     scope: GOOGLE_CALENDAR_SCOPES,
-    state: "calendar",
+    state: encodeOAuthState({ flow: "calendar", returnTo }),
   });
+}
+
+export function encodeOAuthState(state: { flow: "signin" | "calendar"; returnTo?: string }) {
+  return Buffer.from(JSON.stringify(state), "utf8").toString("base64url");
+}
+
+export function decodeOAuthState(raw: string | null): { flow: "signin" | "calendar"; returnTo?: string } {
+  if (!raw) return { flow: "signin" };
+  if (raw === "calendar") return { flow: "calendar" };
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as { flow?: string; returnTo?: string };
+    return { flow: parsed.flow === "calendar" ? "calendar" : "signin", returnTo: parsed.returnTo };
+  } catch {
+    return { flow: "signin" };
+  }
 }
 
 export async function upsertGoogleUser(tokens: Credentials) {

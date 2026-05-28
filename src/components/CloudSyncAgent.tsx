@@ -48,6 +48,7 @@ export default function CloudSyncAgent() {
   const vibration = useStore(s => s.vibration);
   const use24HourTime = useStore(s => s.use24HourTime);
   const displayTomatoes = useStore(s => s.displayTomatoes);
+  const tiltTomatoes = useStore(s => s.tiltTomatoes);
 
   const hydrated = useRef(false);
   const cloudSignature = useRef("");
@@ -119,7 +120,7 @@ export default function CloudSyncAgent() {
     }, 2000);
 
     return () => window.clearTimeout(timer);
-  }, [history, tasks, tags, selectedTag, cycleCount, harvestedTomatoes, pomodoroCycle, shortBreak, longBreak, muted, notificationsEnabled, vibration, use24HourTime, displayTomatoes]);
+  }, [history, tasks, tags, selectedTag, cycleCount, harvestedTomatoes, pomodoroCycle, shortBreak, longBreak, muted, notificationsEnabled, vibration, use24HourTime, displayTomatoes, tiltTomatoes]);
 
   useEffect(() => {
     const completed = history.filter(r => r.completed && r.actualDuration >= 60);

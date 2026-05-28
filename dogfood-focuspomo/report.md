@@ -245,3 +245,42 @@ Google Console 需要确认：
 产品结论：
 - 最合适的方案不是做复杂 CRDT/实时协作，而是 local-first 单用户自动 snapshot 同步：简单、稳定、符合番茄钟/任务清单的实际风险模型。
 - 以后如果要多设备冲突合并，再做 per-record merge；当前阶段用 clientUpdatedAt 的 last-writer-wins 足够，不会把项目搞臃肿。
+
+## 2026-05-28T23:28:00+08:00 PWA Google session + 倾斜偏好持久化回归
+
+用户反馈：
+- PWA 中完成 Google 登录后，再打开应用“不记得账号”。
+- “开启倾斜番茄”看起来像每次打开网页都要重新开启授权。
+- 设置和数据是否都有云同步不清晰。
+
+定位：
+- OAuth callback 固定落到 `focuspomo.bz9.me`，但用户可能从 `pomofocus.bz9.me` 别名安装/打开 PWA；旧 session cookie 只属于回调域名，因此别名 PWA 看起来像没有登录。
+- 旧 session 生命周期为 30 天，cookie 没有显式 `maxAge/domain`，不适合两个 public 子域共用登录态。
+- iOS/iPadOS 的 `DeviceMotionEvent` / `DeviceOrientationEvent` 权限不能由网站或云同步永久静默授予，必须由用户手势触发；但产品可以记住“用户想开启倾斜番茄”的偏好。
+- `fp-tilt-tomatoes` 此前不存在于 store 和云同步自动上传订阅里，倾斜偏好不是一等设置。
+
+修复：
+- session cookie 改为 90 天，生产环境默认 `Domain=.bz9.me`、`SameSite=Lax`、`Secure`、`HttpOnly`、`Path=/`，退出登录也按同域清 cookie。
+- `/api/auth/google` 与 `/api/auth/google/calendar` 把当前 `Host` 编进 OAuth `state`；callback 解码后回到原本打开的 PWA 域名，避免 canonical 域与别名域打架。
+- OAuth state 从裸 `calendar` 改成 JSON base64url，仍兼容旧 `state=calendar`。
+- 新增 `tiltTomatoes` store 字段、`fp-tilt-tomatoes` localStorage key 和设置页“倾斜番茄”开关。
+- `CloudSyncAgent` 把倾斜偏好纳入自动同步依赖；`cloudSync` snapshot keys 纳入 `fp-tilt-tomatoes`。
+- `TomatoPhysics` 只在用户开启倾斜偏好后显示授权按钮；iOS 需要时文案变为“重新授权倾斜”，避免误以为设置丢失。
+- 设备传感器事件添加 cleanup，避免重复启用时叠加监听。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- `rm -rf .next && npm run build`：通过，routes 正常生成，SW 注入 12 个静态资源。
+- `pm2 restart focuspomo --update-env`：成功，`focuspomo` online。
+- 公网 `/api/auth/google`：
+  - `focuspomo.bz9.me` state = `{ flow: "signin", returnTo: "focuspomo.bz9.me" }`。
+  - `pomofocus.bz9.me` state = `{ flow: "signin", returnTo: "pomofocus.bz9.me" }`。
+  - scope = `openid email profile`，不含 Calendar。
+- 公网 `/api/auth/google/calendar`：state = `{ flow: "calendar", returnTo: "pomofocus.bz9.me" }`，scope 包含 `calendar.events`。
+- 公网首页：`focuspomo.bz9.me` 与 `pomofocus.bz9.me` 均 200。
+- 公网 `/api/me`：未登录返回 200 + `{ "user": null }`，符合当前状态 API 语义。
+- `SNAPSHOT_KEYS` 已包含 `fp-tilt-tomatoes`，自动同步 agent 订阅 `tiltTomatoes`。
+
+待真机/账号确认：
+- 需要用户在真实 Google consent 完成一次 callback，确认 `Set-Cookie` 在 iOS PWA 中以 `.bz9.me` 域保留，并且从 `pomofocus.bz9.me` PWA 回来仍显示账号。
+- iOS 传感器权限不保证永久保存；预期体验是设置会同步，打开 PWA 后如系统要求仍需点一次“重新授权倾斜”。

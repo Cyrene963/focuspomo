@@ -3,7 +3,32 @@ import { cookies } from "next/headers";
 import { Pool, type PoolClient } from "pg";
 
 const COOKIE_NAME = "fp_session";
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 90;
+
+function cookieDomain() {
+  return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz9.me" : undefined);
+}
+
+function sessionCookieOptions(expiresAt: Date) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    domain: cookieDomain(),
+    maxAge: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
+    expires: expiresAt,
+  };
+}
+
+function clearCookieOptions() {
+  return {
+    path: "/",
+    domain: cookieDomain(),
+    expires: new Date(0),
+    maxAge: 0,
+  };
+}
 
 let pool: Pool | null = null;
 let migrationsReady: Promise<void> | null = null;
@@ -89,13 +114,7 @@ export async function createSession(userId: string) {
     [id, userId, expiresAt]
   );
   const jar = await cookies();
-  jar.set(COOKIE_NAME, id, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  jar.set(COOKIE_NAME, id, sessionCookieOptions(expiresAt));
 }
 
 export async function clearSession() {
@@ -105,7 +124,7 @@ export async function clearSession() {
     await ensureSchema();
     await getPool().query("DELETE FROM focuspomo_sessions WHERE id = $1", [sessionId]);
   }
-  jar.set(COOKIE_NAME, "", { path: "/", expires: new Date(0) });
+  jar.set(COOKIE_NAME, "", clearCookieOptions());
 }
 
 export async function getSessionUser(client?: PoolClient): Promise<SessionUser | null> {

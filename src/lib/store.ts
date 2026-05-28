@@ -103,12 +103,14 @@ interface Store {
   vibration: boolean;
   use24HourTime: boolean;
   displayTomatoes: boolean;
+  tiltTomatoes: boolean;
   setPomodoroCycle: (n: number) => void;
   setShortBreak: (s: number) => void;
   setLongBreak: (s: number) => void;
   toggleVibration: () => void;
   toggle24HourTime: () => void;
   toggleDisplayTomatoes: () => void;
+  setTiltTomatoes: (v: boolean) => void;
 }
 
 // --- Persistence ---
@@ -400,10 +402,12 @@ export const useStore = create<Store>((set, get) => ({
   vibration: loadJSON('fp-vibration', true),
   use24HourTime: loadJSON('fp-24-hour-time', false),
   displayTomatoes: loadJSON('fp-display-tomatoes', true),
+  tiltTomatoes: loadJSON('fp-tilt-tomatoes', false),
   setPomodoroCycle: (n) => { saveJSON('fp-pomodoro-cycle', n); set({ pomodoroCycle: n }); },
   setShortBreak: (s) => { saveJSON('fp-short-break', s); set({ shortBreak: s }); },
   setLongBreak: (s) => { saveJSON('fp-long-break', s); set({ longBreak: s }); },
   toggleVibration: () => { const v = !get().vibration; saveJSON('fp-vibration', v); set({ vibration: v }); },
   toggle24HourTime: () => { const v = !get().use24HourTime; saveJSON('fp-24-hour-time', v); set({ use24HourTime: v }); },
   toggleDisplayTomatoes: () => { const v = !get().displayTomatoes; saveJSON('fp-display-tomatoes', v); set({ displayTomatoes: v }); },
+  setTiltTomatoes: (v) => { saveJSON('fp-tilt-tomatoes', v); set({ tiltTomatoes: v }); },
 }));

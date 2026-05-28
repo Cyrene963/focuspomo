@@ -256,6 +256,11 @@ export default function SettingsPage() {
 
       <Section title="外观">
         <Row
+          title="倾斜番茄"
+          subtitle="记住你想使用设备倾斜；iOS 可能仍要求每次打开后点一次授权。"
+          right={<IOSToggle value={store.tiltTomatoes} onToggle={() => store.setTiltTomatoes(!store.tiltTomatoes)} color="#E8644E" />}
+        />
+        <Row
           title="深色模式"
           subtitle="切换为夜间低亮度界面"
           right={<IOSToggle value={theme === "dark"} onToggle={toggleTheme} color="#E07A45" />}

@@ -42,8 +42,11 @@ export default function TomatoPhysics() {
   const [redImg, setRedImg] = useState<HTMLImageElement | null>(null);
   const [yellowImg, setYellowImg] = useState<HTMLImageElement | null>(null);
   const [motionStatus, setMotionStatus] = useState<MotionStatus>("unknown");
+  const motionCleanupRef = useRef<(() => void) | null>(null);
   const tomatoes = useStore(s => s.harvestedTomatoes);
   const displayTomatoes = useStore(s => s.displayTomatoes);
+  const tiltTomatoes = useStore(s => s.tiltTomatoes);
+  const setTiltTomatoes = useStore(s => s.setTiltTomatoes);
 
   useEffect(() => {
     loadImage("/tomato-red.svg").then(img => { redImgRef.current = img; setRedImg(img); }).catch(() => {});
@@ -167,6 +170,8 @@ export default function TomatoPhysics() {
       window.removeEventListener("resize", resizeWorld);
       window.removeEventListener("orientationchange", resizeWorld);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      motionCleanupRef.current?.();
+      motionCleanupRef.current = null;
       Engine.clear(engine);
       bodiesRef.current = [];
       drawnTomatoIdsRef.current.clear();
@@ -194,6 +199,7 @@ export default function TomatoPhysics() {
   const enableMotion = async () => {
     const requestPermission = motionPermissionApi();
     try {
+      setTiltTomatoes(true);
       if (requestPermission) {
         const result = await requestPermission();
         if (result !== "granted") {
@@ -203,6 +209,7 @@ export default function TomatoPhysics() {
       }
       const engine = engineRef.current;
       if (!engine) return;
+      motionCleanupRef.current?.();
       let seenMotion = false;
       const applyGravity = (x: number, y: number) => {
         engine.gravity.x = Math.max(-2.4, Math.min(2.4, x));
@@ -226,6 +233,10 @@ export default function TomatoPhysics() {
       };
       window.addEventListener("devicemotion", handleMotion);
       window.addEventListener("deviceorientation", handleOrientation);
+      motionCleanupRef.current = () => {
+        window.removeEventListener("devicemotion", handleMotion);
+        window.removeEventListener("deviceorientation", handleOrientation);
+      };
       setMotionStatus("active");
     } catch {
       setMotionStatus("denied");
@@ -233,6 +244,8 @@ export default function TomatoPhysics() {
   };
 
   if (!displayTomatoes) return null;
+  const showMotionButton = tiltTomatoes && motionStatus !== "active" && motionStatus !== "unsupported";
+  const motionLabel = motionStatus === "denied" ? "倾斜权限未开启" : tiltTomatoes ? "重新授权倾斜" : "开启倾斜番茄";
 
   return (
     <>
@@ -240,7 +253,7 @@ export default function TomatoPhysics() {
         ref={canvasRef}
         style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none" }}
       />
-      {motionStatus !== "active" && motionStatus !== "unsupported" && (
+      {showMotionButton && (
         <button
           type="button"
           onClick={enableMotion}
@@ -261,7 +274,7 @@ export default function TomatoPhysics() {
             fontWeight: 850,
           }}
         >
-          {motionStatus === "denied" ? "倾斜权限未开启" : "开启倾斜番茄"}
+          {motionLabel}
         </button>
       )}
     </>
