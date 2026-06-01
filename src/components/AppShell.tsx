@@ -24,7 +24,7 @@ const DOT_LABELS: Record<Page, string> = {
 };
 
 export default function AppShell() {
-  const { page, setPage } = useStore();
+  const { page, setPage, focusMode, exitFocusMode } = useStore();
 
   const go = useCallback((p: Page) => setPage(p), [setPage]);
   const swipeLeft = useCallback(() => {
@@ -71,55 +71,59 @@ export default function AppShell() {
   return (
     <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
       <TomatoPhysics />
-      <AnimatePresence mode="wait">
-        {page === "timer" && (
-          <GestureWrapper key="timer" enterX={0} enterY={0}
-            onSwipeLeft={swipeLeft}
-            onSwipeRight={swipeRight}
-            onSwipeUp={() => go("summary")}
-          >
-            <TimerPage />
-          </GestureWrapper>
-        )}
-        {page === "stats" && (
-          <GestureWrapper key="stats" enterX={60} enterY={0}
-            onSwipeRight={swipeRight}
-          >
-            <StatsPage />
-          </GestureWrapper>
-        )}
-        {page === "tasks" && (
-          <GestureWrapper key="tasks" enterX={-60} enterY={0}
-            onSwipeLeft={swipeLeft}
-            onSwipeRight={swipeRight}
-          >
-            <TasksPage />
-          </GestureWrapper>
-        )}
-        {page === "calendar" && (
-          <GestureWrapper key="calendar" enterX={-60} enterY={0}
-            onSwipeLeft={swipeLeft}
-            onSwipeRight={swipeRight}
-          >
-            <CalendarPage />
-          </GestureWrapper>
-        )}
-        {page === "settings" && (
-          <GestureWrapper key="settings" enterX={-60} enterY={0}
-            onSwipeLeft={swipeLeft}
-          >
-            <SettingsPage />
-          </GestureWrapper>
-        )}
-        {page === "summary" && (
-          <GestureWrapper key="summary" enterX={0} enterY={60}
-            touchAction="none"
-            onSwipeDown={() => go("timer")}
-          >
-            <SummaryPage />
-          </GestureWrapper>
-        )}
-      </AnimatePresence>
+      {focusMode ? (
+        <TimerPage />
+      ) : (
+        <AnimatePresence mode="wait">
+          {page === "timer" && (
+            <GestureWrapper key="timer" enterX={0} enterY={0}
+              onSwipeLeft={swipeLeft}
+              onSwipeRight={swipeRight}
+              onSwipeUp={() => go("summary")}
+            >
+              <TimerPage />
+            </GestureWrapper>
+          )}
+          {page === "stats" && (
+            <GestureWrapper key="stats" enterX={60} enterY={0}
+              onSwipeRight={swipeRight}
+            >
+              <StatsPage />
+            </GestureWrapper>
+          )}
+          {page === "tasks" && (
+            <GestureWrapper key="tasks" enterX={-60} enterY={0}
+              onSwipeLeft={swipeLeft}
+              onSwipeRight={swipeRight}
+            >
+              <TasksPage />
+            </GestureWrapper>
+          )}
+          {page === "calendar" && (
+            <GestureWrapper key="calendar" enterX={-60} enterY={0}
+              onSwipeLeft={swipeLeft}
+              onSwipeRight={swipeRight}
+            >
+              <CalendarPage />
+            </GestureWrapper>
+          )}
+          {page === "settings" && (
+            <GestureWrapper key="settings" enterX={-60} enterY={0}
+              onSwipeLeft={swipeLeft}
+            >
+              <SettingsPage />
+            </GestureWrapper>
+          )}
+          {page === "summary" && (
+            <GestureWrapper key="summary" enterX={0} enterY={60}
+              touchAction="none"
+              onSwipeDown={() => go("timer")}
+            >
+              <SummaryPage />
+            </GestureWrapper>
+          )}
+        </AnimatePresence>
+      )}
 
       <div style={{
         position: "absolute", bottom: "max(24px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",

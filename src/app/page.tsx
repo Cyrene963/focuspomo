@@ -13,6 +13,7 @@ export default function Page() {
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
+        position: "relative",
       }}
     >
       <section
@@ -25,7 +26,14 @@ export default function Page() {
           background: "rgba(255,255,255,0.72)",
           boxShadow: "0 24px 80px rgba(45,38,37,0.14)",
           textAlign: "center",
+          position: "absolute",
+          inset: "50% auto auto 50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 0,
+          pointerEvents: "none",
         }}
+        inert
+        aria-hidden="true"
       >
         <img
           src="/icon-1779372627-apple.png"

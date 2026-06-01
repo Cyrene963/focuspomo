@@ -76,6 +76,22 @@ export default function TimerPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isActive, tick]);
 
+  // When iOS/PWA resumes from suspension, recompute from wall-clock immediately.
+  // This cannot guarantee a background alarm on every platform, but it prevents a
+  // stale foreground timer after returning to the app.
+  useEffect(() => {
+    if (!isActive) return;
+    const refresh = () => tick();
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("pageshow", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("pageshow", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [isActive, tick]);
+
   // Completion detection
   useEffect(() => {
     if (prevStateRef.current === "running" && state === "completed") {

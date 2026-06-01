@@ -120,7 +120,8 @@ export default function TomatoPhysics() {
   const addTomatoBody = (tomato: HarvestedTomato, replay = false) => {
     if (!engineRef.current || !canvasRef.current || drawnTomatoIdsRef.current.has(tomato.id)) return;
     const canvas = canvasRef.current;
-    const scale = Math.min(tomato.durationSeconds / (25 * 60), 2.5);
+    const tomatoBodyScale = Math.max(tomato.durationSeconds, 60) / (25 * 60);
+    const scale = Math.min(tomatoBodyScale, 2.5);
     const radius = (18 + scale * 8) * (window.devicePixelRatio || 1);
     const x = canvas.width * 0.18 + Math.random() * canvas.width * 0.64;
     const y = replay ? canvas.height - radius * (1.8 + Math.random() * 4) : -radius * 3;

@@ -44,6 +44,98 @@ export function writeClientUpdatedAt(updatedAt: number) {
 
 export type Snapshot = Record<string, unknown>;
 
+function finiteNumber(value: unknown, min: number, max: number) {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+}
+
+function validString(value: unknown, max = 240) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= max;
+}
+
+function validTag(value: unknown) {
+  const tag = value as Record<string, unknown>;
+  return Boolean(
+    tag && typeof tag === "object" &&
+    validString(tag.id, 80) && validString(tag.name, 80) && validString(tag.color, 40) &&
+    finiteNumber(tag.duration, 60, 120 * 60)
+  );
+}
+
+function validRecord(value: unknown) {
+  const record = value as Record<string, unknown>;
+  return Boolean(
+    record && typeof record === "object" &&
+    validString(record.id, 120) && validString(record.tagId, 120) && validString(record.tagName, 120) &&
+    validString(record.tagColor, 40) &&
+    finiteNumber(record.plannedDuration, 0, 12 * 60 * 60) &&
+    finiteNumber(record.actualDuration, 0, 12 * 60 * 60) &&
+    finiteNumber(record.startTime, 0, Date.now() + 365 * 86400000) &&
+    finiteNumber(record.endTime, 0, Date.now() + 365 * 86400000) &&
+    typeof record.completed === "boolean"
+  );
+}
+
+function validTask(value: unknown) {
+  const task = value as Record<string, unknown>;
+  return Boolean(
+    task && typeof task === "object" &&
+    validString(task.id, 120) && validString(task.title, 500) &&
+    ["low", "medium", "high"].includes(String(task.priority)) &&
+    typeof task.important === "boolean" && typeof task.urgent === "boolean" &&
+    finiteNumber(task.estimatedPomodoros, 1, 8) &&
+    typeof task.completed === "boolean" && typeof task.plannedToday === "boolean" &&
+    finiteNumber(task.createdAt, 0, Date.now() + 365 * 86400000) &&
+    finiteNumber(task.updatedAt, 0, Date.now() + 365 * 86400000)
+  );
+}
+
+function validActiveTimer(value: unknown) {
+  if (value === null) return true;
+  const timer = value as Record<string, unknown>;
+  return Boolean(
+    timer && typeof timer === "object" && timer.state === "running" &&
+    ["focus", "shortBreak", "longBreak"].includes(String(timer.session)) &&
+    validString(timer.tagId, 120) && finiteNumber(timer.activeDuration, 60, 12 * 60 * 60) &&
+    finiteNumber(timer.startTime, 0, Date.now() + 365 * 86400000)
+  );
+}
+
+function validateSnapshotValue(key: typeof SNAPSHOT_KEYS[number], value: unknown) {
+  switch (key) {
+    case "fp-tags": return Array.isArray(value) && value.length > 0 && value.length <= 80 && value.every(validTag);
+    case "fp-selected-tag": return Boolean(value && typeof value === "object" && validString((value as Record<string, unknown>).id, 120));
+    case "fp-history": return Array.isArray(value) && value.length <= 5000 && value.every(validRecord);
+    case "fp-harvested-tomatoes": return Array.isArray(value) && value.length <= 100 && value.every(v => {
+      const t = v as Record<string, unknown>;
+      return Boolean(t && typeof t === "object" && validString(t.id, 120) && typeof t.completed === "boolean" && finiteNumber(t.durationSeconds, 0, 12 * 60 * 60) && finiteNumber(t.collectedAt, 0, Date.now() + 365 * 86400000));
+    });
+    case "fp-cycle-count": return finiteNumber(value, 0, 100000);
+    case "fp-tasks": return Array.isArray(value) && value.length <= 1000 && value.every(validTask);
+    case "fp-pomodoro-cycle": return finiteNumber(value, 1, 12);
+    case "fp-short-break":
+    case "fp-long-break": return finiteNumber(value, 60, 120 * 60);
+    case "fp-muted":
+    case "fp-notifications-enabled":
+    case "fp-vibration":
+    case "fp-24-hour-time":
+    case "fp-display-tomatoes":
+    case "fp-tilt-tomatoes": return typeof value === "boolean";
+    case "fp-active-timer": return validActiveTimer(value);
+    case "fp-theme": return value === "light" || value === "dark";
+    default: return false;
+  }
+}
+
+export function sanitizeSnapshot(data: Snapshot): Snapshot {
+  const clean: Snapshot = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (isSnapshotKey(key) && validateSnapshotValue(key, value)) clean[key] = value;
+  }
+  const rawUpdatedAt = data[CLIENT_UPDATED_AT_KEY];
+  if (typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt)) clean[CLIENT_UPDATED_AT_KEY] = rawUpdatedAt;
+  return clean;
+}
+
 export function localClientUpdatedAt() {
   if (typeof window === "undefined") return 0;
   const raw = window.localStorage.getItem(CLIENT_UPDATED_AT_KEY);
@@ -67,9 +159,10 @@ export function readSnapshot(options: { touch?: boolean } = {}): Snapshot {
 }
 
 export function snapshotSignature(data: Snapshot) {
+  const clean = sanitizeSnapshot(data);
   return JSON.stringify(
     SNAPSHOT_KEYS.reduce<Snapshot>((acc, key) => {
-      if (Object.prototype.hasOwnProperty.call(data, key)) acc[key] = data[key];
+      if (Object.prototype.hasOwnProperty.call(clean, key)) acc[key] = clean[key];
       return acc;
     }, {})
   );
@@ -81,12 +174,14 @@ export function hasUsefulLocalSnapshot(data: Snapshot) {
 
 export function applySnapshot(data: Snapshot) {
   if (typeof window === "undefined") return;
-  for (const [key, value] of Object.entries(data)) {
+  const clean = sanitizeSnapshot(data);
+  if (!hasUsefulLocalSnapshot(clean)) throw new Error("Cloud snapshot has no valid FocusPomo data");
+  for (const [key, value] of Object.entries(clean)) {
     if (isSnapshotKey(key)) {
       try { writeLocalSnapshotKey(key, value); } catch {}
     }
   }
-  const rawUpdatedAt = data[CLIENT_UPDATED_AT_KEY];
+  const rawUpdatedAt = clean[CLIENT_UPDATED_AT_KEY];
   if (typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt)) {
     writeClientUpdatedAt(rawUpdatedAt);
   }

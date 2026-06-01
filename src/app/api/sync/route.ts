@@ -36,7 +36,7 @@ export async function PUT(req: Request) {
   try {
     const user = await requireSessionUser();
     const body = (await req.json()) as SyncPayload;
-    if (!body || typeof body !== "object" || body.data === undefined) {
+    if (!body || typeof body !== "object" || body.data === undefined || typeof body.data !== "object" || body.data === null || Array.isArray(body.data)) {
       return NextResponse.json({ error: "Missing sync data" }, { status: 400 });
     }
     const clientUpdatedAt = Number.isFinite(body.clientUpdatedAt) ? Number(body.clientUpdatedAt) : Date.now();

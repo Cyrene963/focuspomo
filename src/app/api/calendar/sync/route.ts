@@ -67,7 +67,10 @@ export async function POST(req: Request) {
     if (!enabled) return NextResponse.json({ ok: true, enabled: false, synced: 0, skipped: 0 });
     if (!(await hasCalendarPermission(user.id))) throw calendarAuthError();
 
-    const records = (body.records || []).filter(validRecord).slice(0, 100);
+    const records = (body.records || [])
+      .filter(validRecord)
+      .sort((a, b) => b.endTime - a.endTime)
+      .slice(0, 100);
     if (records.length === 0) return NextResponse.json({ ok: true, enabled: true, synced: 0, skipped: 0 });
 
     const existing = await getPool().query(

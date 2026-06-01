@@ -6,15 +6,18 @@ type Theme = "light" | "dark";
 const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "light", toggle: () => {} });
 export const useTheme = () => useContext(ThemeCtx);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+function initialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const saved = window.localStorage.getItem("fp-theme");
+    return saved === "dark" || saved === "light" ? saved : "light";
+  } catch {
+    return "light";
+  }
+}
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("fp-theme") as Theme;
-      if (saved) setTheme(saved);
-    } catch {}
-  }, []);
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");

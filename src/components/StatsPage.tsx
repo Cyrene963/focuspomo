@@ -72,7 +72,7 @@ export default function StatsPage() {
     return [...m.values()].sort((a, b) => b.mins - a.mins);
   }, [filtered]);
 
-  const recentTomatoes = useMemo(() => [...history].filter(r => r.completed).slice(-35).reverse(), [history]);
+  const recentTomatoes = useMemo(() => [...history].slice(-35).reverse(), [history]);
 
   const streak = useMemo(() => {
     const days = new Set(history.filter(r => r.completed).map(r => new Date(r.startTime).toDateString()));
