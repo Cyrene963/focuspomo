@@ -6,9 +6,9 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
-  "/_next/static/6En94wbI_AzBdndyZ_Snx/_buildManifest.js",
-  "/_next/static/6En94wbI_AzBdndyZ_Snx/_clientMiddlewareManifest.js",
-  "/_next/static/6En94wbI_AzBdndyZ_Snx/_ssgManifest.js",
+  "/_next/static/E-Z-EWf4Yd1KTclAaGGUW/_buildManifest.js",
+  "/_next/static/E-Z-EWf4Yd1KTclAaGGUW/_clientMiddlewareManifest.js",
+  "/_next/static/E-Z-EWf4Yd1KTclAaGGUW/_ssgManifest.js",
   "/_next/static/chunks/03cnjj9mnzy_p.js",
   "/_next/static/chunks/03~yq9q893hmn.js",
   "/_next/static/chunks/08yplism_vk49.js",
