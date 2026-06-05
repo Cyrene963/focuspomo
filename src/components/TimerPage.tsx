@@ -25,6 +25,15 @@ function playDing(muted: boolean) {
   } catch {}
 }
 
+function unlockAudio() {
+  // iOS/Safari only allow AudioContext to start inside a user gesture. Create/resume
+  // it on the Start press so the completion ding actually plays later.
+  try {
+    if (!audioCtx || audioCtx.state === "closed") audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch {}
+}
+
 function notifyDone(enabled: boolean, title: string, body: string) {
   if (!enabled || typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
@@ -241,7 +250,7 @@ export default function TimerPage() {
 
               {/* Start button */}
               <motion.button
-                onClick={(e) => { e.stopPropagation(); start(); }}
+                onClick={(e) => { e.stopPropagation(); unlockAudio(); start(); }}
                 className="pressable" whileTap={{ scale: 0.96 }}
                 style={{
                   marginBottom: "max(76px, env(safe-area-inset-bottom))",
@@ -299,7 +308,7 @@ export default function TimerPage() {
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
                 style={{ fontSize: 72 }}>{isBreak ? "☕️" : "🍅"}</motion.div>
-              <span style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>{isBreak ? "休息结束" : "完成啦！"}</span>
+              <span role="status" aria-live="assertive" style={{ fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 800, color: "var(--text)" }}>{isBreak ? "休息结束" : "完成啦！"}</span>
               <span style={{ fontSize: 17, color: "var(--text-sec)" }}>{isBreak ? "准备进入下一轮专注" : "+1 🍅"}</span>
               <div style={{ display: "flex", gap: 14, marginTop: 28 }}>
                 {isBreak ? (

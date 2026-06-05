@@ -24,7 +24,8 @@ const DOT_LABELS: Record<Page, string> = {
 };
 
 export default function AppShell() {
-  const { page, setPage, focusMode, exitFocusMode } = useStore();
+  const { page, setPage, focusMode } = useStore();
+  const shouldShowTomatoes = focusMode || page === "timer";
 
   const go = useCallback((p: Page) => setPage(p), [setPage]);
   const swipeLeft = useCallback(() => {
@@ -70,7 +71,7 @@ export default function AppShell() {
 
   return (
     <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
-      <TomatoPhysics />
+      {shouldShowTomatoes && <TomatoPhysics />}
       {focusMode ? (
         <TimerPage />
       ) : (
@@ -125,32 +126,34 @@ export default function AppShell() {
         </AnimatePresence>
       )}
 
-      <div style={{
-        position: "absolute", bottom: "max(24px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
-        display: "flex", gap: 2, zIndex: 10,
-      }}>
-        {DOT_PAGES.map(p => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => go(p)}
-            className="pressable"
-            aria-label={DOT_LABELS[p]}
-            aria-current={p === page ? "page" : undefined}
-            style={{
-              width: 44, height: 44, borderRadius: 22,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <span style={{
-              width: p === page ? 22 : 6, height: 6, borderRadius: 3,
-              background: p === page ? "var(--accent)" : "var(--text-sec)",
-              opacity: p === page ? 1 : 0.3,
-              transition: "all 0.25s ease",
-            }} />
-          </button>
-        ))}
-      </div>
+      {!focusMode && (
+        <div style={{
+          position: "absolute", bottom: "max(24px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
+          display: "flex", gap: 2, zIndex: 10,
+        }}>
+          {DOT_PAGES.map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => go(p)}
+              className="pressable"
+              aria-label={DOT_LABELS[p]}
+              aria-current={p === page ? "page" : undefined}
+              style={{
+                width: 44, height: 44, borderRadius: 22,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <span style={{
+                width: p === page ? 22 : 6, height: 6, borderRadius: 3,
+                background: p === page ? "var(--accent)" : "var(--text-sec)",
+                opacity: p === page ? 1 : 0.3,
+                transition: "all 0.25s ease",
+              }} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

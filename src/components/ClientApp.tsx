@@ -11,6 +11,10 @@ export default function ClientApp() {
   const enterFocusMode = useStore(s => s.enterFocusMode);
 
   useEffect(() => {
+    document.getElementById("focuspomo-offline-ssr-shell")?.setAttribute("data-hydrated", "true");
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("shortcut") !== "start") return;
     if (state === "idle") start();

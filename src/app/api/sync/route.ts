@@ -28,6 +28,12 @@ export async function GET() {
         : null,
     });
   } catch (err) {
+    // If user is not authenticated, return empty snapshot instead of 401
+    // This prevents console noise when not logged in
+    const status = typeof err === "object" && err && "status" in err ? Number((err as { status?: number }).status) : 500;
+    if (status === 401) {
+      return NextResponse.json({ snapshot: null });
+    }
     return apiError(err);
   }
 }

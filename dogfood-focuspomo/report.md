@@ -312,3 +312,38 @@ Google Console 需要确认：
 - 线上 `focuspomo.bz9.me` / `pomofocus.bz9.me` 首页均 200。
 - 未登录 `/api/sync` GET/PUT 均 401，边界正常。
 - OAuth state 仍正确保留 `returnTo` 域名。
+
+
+## 2026-06-01T23:59:33+08:00 iPad 横屏倾斜番茄 + 跨页面物理层修复复核
+
+用户反馈：
+- iPad 横屏左边往下倾斜时，番茄不应该往左上滚；横屏下的重力方向语义反了。
+- 切到统计/任务/设置等非计时页面后，成熟番茄物理层不应继续覆盖页面；这些页面不是番茄游乐场。
+
+根因：
+- 旧 `TomatoPhysics` 把 `devicemotion.accelerationIncludingGravity.x/y` 直接映射到 Matter gravity，没有按 `screen.orientation.angle` / `window.orientation` 把设备坐标旋转到当前屏幕坐标系。
+- `AppShell` 的 `shouldShowTomatoes` 包含 `page === "summary"`，而全局物理层在 Summary/其它切换状态下容易制造视觉干扰；长期使用时用户只想在计时/专注场景看到番茄。
+
+修复：
+- 新增 `src/lib/motionGravity.ts`：集中处理 screen angle 归一化、设备重力向屏幕坐标旋转、Motion/Orientation 双通道映射。
+- `TomatoPhysics` 改为调用 `gravityFromDeviceMotion()` / `gravityFromDeviceOrientation()`，横屏/竖屏都按屏幕坐标输出。
+- `AppShell` 改为 `const shouldShowTomatoes = focusMode || page === "timer";`，非计时页面不再渲染 canvas，也不会显示倾斜授权按钮。
+- 新增 `scripts/test-motion-gravity.ts` 覆盖 iPad 横屏语义：screen angle 90° 时，设备左侧向下应映射为屏幕向下；screen angle -90° 时方向相反；竖屏映射保持直觉。
+
+验证：
+- `npx tsc --noEmit`：通过。
+- motionGravity 回归脚本：`motionGravity regression OK`。
+- 源码断言：`AppShell_tomatoes_timer_only=True`，`AppShell_no_summary_tomatoes=True`，`rotateDeviceGravityToScreen` 存在。
+- `rm -rf .next && npm run build`：通过，Next 16 production build 成功，SW 注入 12 个静态资源。
+- `pm2 restart focuspomo --update-env`：成功，`focuspomo` online。
+- 本地首页 `http://127.0.0.1:3457/`：200。
+- 公网首页 `https://focuspomo.bz9.me/`：200，HTML bytes 16287。
+- 公网 `sw.js`：200，包含 `_next/static` precache marker。
+- 公网首页引用的 9 个 clean `_next/static` assets：全部 200。
+- Browser runtime：计时器页 `canvasCount=1` 且核心 UI 可见；统计页 `canvasCount=0`；任务页 `canvasCount=0`；设置页 `canvasCount=0`。
+- Browser visual check：计时器页面 UI 居中、按钮/文字未被 canvas 覆盖、无明显 layout defect。
+
+证据标签：
+- Verified working：生产构建、PM2 部署、本地/公网 HTTP、静态资源、SW、源码/TS gates、浏览器 DOM 页面切换 gates。
+- Partially verified：真实 iPad 传感器方向仍需真机确认；浏览器工具无法模拟 iPadOS 真实 `DeviceMotionEvent` 权限弹窗和物理设备倾斜。
+- Risk：真实 Safari/PWA 旧 service worker 更新可能需要用户关闭重开或等待 SW 激活；若真机仍反向，应采集一次 `screen.orientation.angle` 与 `accelerationIncludingGravity` 样本再校准。

@@ -32,8 +32,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="FocusPomo" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* Apply saved theme before first paint to avoid a light-mode flash (FOUC) for dark users. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('fp-theme')==='dark'){document.documentElement.classList.add('dark');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content','#17110E');}}catch(e){}})();`,
+          }}
+        />
       </head>
-      <body style={{ margin: 0, padding: 0, background: "#FFF8F0", overflow: "hidden", minHeight: "100vh" }}>
+      <body style={{ margin: 0, padding: 0, background: "var(--bg)", overflow: "hidden", minHeight: "100vh" }}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

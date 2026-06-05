@@ -29,8 +29,9 @@ export default function Page() {
           position: "absolute",
           inset: "50% auto auto 50%",
           transform: "translate(-50%, -50%)",
-          zIndex: 0,
           pointerEvents: "none",
+          opacity: 1,
+          transition: "opacity 0.18s ease, visibility 0.18s ease",
         }}
         inert
         aria-hidden="true"

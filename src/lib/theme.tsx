@@ -21,6 +21,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#17110E" : "#FFF8F0");
     try { writeLocalRawSnapshotKey("fp-theme", theme); } catch {}
   }, [theme]);
 

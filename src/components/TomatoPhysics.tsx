@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Matter from "matter-js";
 import { useStore, type HarvestedTomato } from "@/lib/store";
+import { gravityFromDeviceMotion, gravityFromDeviceOrientation, resolveScreenAngle } from "@/lib/motionGravity";
 
 const { Engine, Bodies, Composite, Body } = Matter;
 
@@ -10,6 +11,7 @@ type MotionStatus = "unknown" | "unsupported" | "needs-permission" | "active" | 
 
 type BoundaryBodies = {
   ground: Matter.Body;
+  ceiling: Matter.Body;
   wallL: Matter.Body;
   wallR: Matter.Body;
 };
@@ -43,14 +45,28 @@ export default function TomatoPhysics() {
   const [yellowImg, setYellowImg] = useState<HTMLImageElement | null>(null);
   const [motionStatus, setMotionStatus] = useState<MotionStatus>("unknown");
   const motionCleanupRef = useRef<(() => void) | null>(null);
+  // Tilt debug HUD: enable with ?tiltdebug=1 or localStorage fp-tilt-debug=1.
+  const [tiltDebug, setTiltDebug] = useState(false);
+  const [tiltDbg, setTiltDbg] = useState<null | { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }>(null);
+  const tiltDebugRef = useRef(false);
+  const lastDbgRef = useRef(0);
   const tomatoes = useStore(s => s.harvestedTomatoes);
   const displayTomatoes = useStore(s => s.displayTomatoes);
   const tiltTomatoes = useStore(s => s.tiltTomatoes);
   const setTiltTomatoes = useStore(s => s.setTiltTomatoes);
+  const page = useStore(s => s.page);
 
   useEffect(() => {
     loadImage("/tomato-red.svg").then(img => { redImgRef.current = img; setRedImg(img); }).catch(() => {});
     loadImage("/tomato-yellow.svg").then(img => { yellowImgRef.current = img; setYellowImg(img); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    try {
+      const on = new URLSearchParams(window.location.search).has("tiltdebug") || localStorage.getItem("fp-tilt-debug") === "1";
+      tiltDebugRef.current = on;
+      setTiltDebug(on);
+    } catch {}
   }, []);
 
   const ensureAnimating = () => {
@@ -111,6 +127,8 @@ export default function TomatoPhysics() {
     if (boundaries) {
       Body.setPosition(boundaries.ground, { x: canvas.width / 2, y: canvas.height + 20 * scale });
       Body.setVertices(boundaries.ground, Bodies.rectangle(canvas.width / 2, canvas.height + 20 * scale, canvas.width + 100 * scale, 40 * scale, { isStatic: true }).vertices);
+      Body.setPosition(boundaries.ceiling, { x: canvas.width / 2, y: -20 * scale });
+      Body.setVertices(boundaries.ceiling, Bodies.rectangle(canvas.width / 2, -20 * scale, canvas.width + 100 * scale, 40 * scale, { isStatic: true }).vertices);
       Body.setPosition(boundaries.wallL, { x: -20 * scale, y: canvas.height / 2 });
       Body.setPosition(boundaries.wallR, { x: canvas.width + 20 * scale, y: canvas.height / 2 });
     }
@@ -159,10 +177,11 @@ export default function TomatoPhysics() {
     const engine = Engine.create({ gravity: { x: 0, y: 1.2 } });
     engineRef.current = engine;
     const ground = Bodies.rectangle(canvas.width / 2, canvas.height + 20 * ratio, canvas.width + 100 * ratio, 40 * ratio, { isStatic: true });
+    const ceiling = Bodies.rectangle(canvas.width / 2, -20 * ratio, canvas.width + 100 * ratio, 40 * ratio, { isStatic: true });
     const wallL = Bodies.rectangle(-20 * ratio, canvas.height / 2, 40 * ratio, canvas.height * 2, { isStatic: true });
     const wallR = Bodies.rectangle(canvas.width + 20 * ratio, canvas.height / 2, 40 * ratio, canvas.height * 2, { isStatic: true });
-    boundariesRef.current = { ground, wallL, wallR };
-    Composite.add(engine.world, [ground, wallL, wallR]);
+    boundariesRef.current = { ground, ceiling, wallL, wallR };
+    Composite.add(engine.world, [ground, ceiling, wallL, wallR]);
     if (!motionPermissionApi() && ("DeviceMotionEvent" in window || "DeviceOrientationEvent" in window)) setMotionStatus("unknown");
     if (!("DeviceMotionEvent" in window) && !("DeviceOrientationEvent" in window)) setMotionStatus("unsupported");
     window.addEventListener("resize", resizeWorld);
@@ -212,31 +231,61 @@ export default function TomatoPhysics() {
       if (!engine) return;
       motionCleanupRef.current?.();
       let seenMotion = false;
-      const applyGravity = (x: number, y: number) => {
-        engine.gravity.x = Math.max(-2.4, Math.min(2.4, x));
-        engine.gravity.y = Math.max(0.25, Math.min(2.4, y));
+      const applyGravity = ({ x, y }: { x: number; y: number }) => {
+        engine.gravity.x = x;
+        engine.gravity.y = y;
         setMotionStatus("active");
         ensureAnimating();
       };
+      const pushDbg = (d: { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }) => {
+        if (!tiltDebugRef.current) return;
+        const now = Date.now();
+        if (now - lastDbgRef.current < 100) return; // throttle HUD to ~10fps
+        lastDbgRef.current = now;
+        setTiltDbg(d);
+      };
+      // Per-orientation vertical-sign auto-calibration. iOS accelerationIncludingGravity
+      // sign AND the landscape 90/270 ambiguity are both unreliable on iPad, so instead of
+      // hardcoding signs we lock the vertical direction the first time we see a strong
+      // vertical reading in each orientation (i.e. when the user is holding the device up to
+      // view it, gravity should point toward the bottom of the screen). Robust, no guessing.
+      const vCal: Record<number, number> = {};
+      const calibrateVSign = (angle: number, gy: number): number => {
+        if (vCal[angle] === undefined && Math.abs(gy) > 0.5) vCal[angle] = gy >= 0 ? 1 : -1;
+        return vCal[angle] ?? 1;
+      };
       const handleMotion = (e: DeviceMotionEvent) => {
-        const gx = e.accelerationIncludingGravity?.x;
-        const gy = e.accelerationIncludingGravity?.y;
-        if (typeof gx === "number" && typeof gy === "number") {
+        const ax = e.accelerationIncludingGravity?.x;
+        const ay = e.accelerationIncludingGravity?.y;
+        const az = e.accelerationIncludingGravity?.z;
+        if (typeof ax === "number" && typeof ay === "number") {
           seenMotion = true;
-          applyGravity(gx / 4.5, Math.abs(gy) / 4.5 + 0.35);
+          const angle = resolveScreenAngle();
+          const g = gravityFromDeviceMotion(ax, ay, angle);
+          const fg = { x: g.x, y: g.y * calibrateVSign(angle, g.y) };
+          applyGravity(fg);
+          pushDbg({ src: "motion", angle, ax, ay, az: az ?? 0, gvx: fg.x, gvy: fg.y });
         }
       };
       const handleOrientation = (e: DeviceOrientationEvent) => {
         if (seenMotion) return;
-        const gamma = (e.gamma || 0) / 45;
-        const beta = ((e.beta || 0) - 45) / 60;
-        applyGravity(gamma * 1.35, 1.1 + beta * 0.8);
+        const angle = resolveScreenAngle();
+        const g = gravityFromDeviceOrientation(e.beta || 0, e.gamma || 0, angle);
+        const fg = { x: g.x, y: g.y * calibrateVSign(angle, g.y) };
+        applyGravity(fg);
+        pushDbg({ src: "orient", angle, beta: e.beta, gamma: e.gamma, gvx: fg.x, gvy: fg.y });
+      };
+      const resetGravity = () => {
+        if (!engineRef.current) return;
+        engineRef.current.gravity.x = 0;
+        engineRef.current.gravity.y = 1.2;
       };
       window.addEventListener("devicemotion", handleMotion);
       window.addEventListener("deviceorientation", handleOrientation);
       motionCleanupRef.current = () => {
         window.removeEventListener("devicemotion", handleMotion);
         window.removeEventListener("deviceorientation", handleOrientation);
+        resetGravity();
       };
       setMotionStatus("active");
     } catch {
@@ -245,8 +294,8 @@ export default function TomatoPhysics() {
   };
 
   if (!displayTomatoes) return null;
-  const showMotionButton = tiltTomatoes && motionStatus !== "active" && motionStatus !== "unsupported";
-  const motionLabel = motionStatus === "denied" ? "倾斜权限未开启" : tiltTomatoes ? "重新授权倾斜" : "开启倾斜番茄";
+  const showMotionButton = page === "timer" && tiltTomatoes && motionStatus !== "active" && motionStatus !== "unsupported";
+  const motionLabel = motionStatus === "denied" ? "倾斜权限未开启" : "授权倾斜";
 
   return (
     <>
@@ -262,9 +311,9 @@ export default function TomatoPhysics() {
           style={{
             position: "absolute",
             right: 18,
-            bottom: "max(82px, calc(env(safe-area-inset-bottom) + 72px))",
+            top: "max(14px, env(safe-area-inset-top))",
             zIndex: 22,
-            padding: "9px 12px",
+            padding: "8px 11px",
             borderRadius: 999,
             background: "rgba(255,255,255,0.62)",
             color: "var(--text)",
@@ -277,6 +326,21 @@ export default function TomatoPhysics() {
         >
           {motionLabel}
         </button>
+      )}
+      {tiltDebug && tiltDbg && (
+        <div style={{
+          position: "absolute", left: 8, top: "max(8px, env(safe-area-inset-top))", zIndex: 30,
+          background: "rgba(0,0,0,0.74)", color: "#fff", fontFamily: "ui-monospace, monospace", fontSize: 11,
+          lineHeight: 1.5, padding: "8px 10px", borderRadius: 8, pointerEvents: "none", whiteSpace: "pre",
+        }}>
+          {`src ${tiltDbg.src}   angle ${tiltDbg.angle}°\n`}
+          {tiltDbg.src === "motion"
+            ? `accel x ${tiltDbg.ax?.toFixed(2)} y ${tiltDbg.ay?.toFixed(2)} z ${tiltDbg.az?.toFixed(2)}\n`
+            : `β ${tiltDbg.beta?.toFixed(1)}  γ ${tiltDbg.gamma?.toFixed(1)}\n`}
+          {`grav  x ${tiltDbg.gvx.toFixed(2)}  y ${tiltDbg.gvy.toFixed(2)}\n`}
+          {`roll  ${tiltDbg.gvx > 0.2 ? "→ 右" : tiltDbg.gvx < -0.2 ? "← 左" : "·"}   ${tiltDbg.gvy > 0.2 ? "↓ 下" : tiltDbg.gvy < -0.2 ? "↑ 上" : "·"}\n`}
+          {typeof window !== "undefined" ? `view ${window.innerWidth}×${window.innerHeight}` : ""}
+        </div>
       )}
     </>
   );
