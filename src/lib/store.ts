@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { writeLocalSnapshotKey, type SNAPSHOT_KEYS } from "@/lib/cloudSync";
+import type { AchievementId } from "@/lib/achievements";
 
 export type TimerState = 'idle' | 'running' | 'completed';
 export type TimerSession = 'focus' | 'shortBreak' | 'longBreak';
@@ -123,6 +124,12 @@ interface Store {
   toggle24HourTime: () => void;
   toggleDisplayTomatoes: () => void;
   setTiltTomatoes: (v: boolean) => void;
+
+  // Achievements
+  unlockedAchievements: Set<AchievementId>;
+  celebratingAchievement: AchievementId | null;
+  setCelebratingAchievement: (id: AchievementId | null) => void;
+  checkAndUnlockAchievements: () => AchievementId | null;
 }
 
 // --- Persistence ---
@@ -331,12 +338,18 @@ export const useStore = create<Store>((set, get) => ({
     saveJSON('fp-cycle-count', nextCycleCount);
     clearActiveTimer();
     set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount, startTime: null });
+
+    // Check for achievements
+    const achievementId = get().checkAndUnlockAchievements();
+    if (achievementId) {
+      set({ celebratingAchievement: achievementId });
+    }
   },
   interrupt: () => {
     const { selectedTag, startTime, history, session, activeDuration } = get();
     if (session !== 'focus') {
       clearActiveTimer();
-      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false });
       return;
     }
     const now = Date.now();
@@ -348,15 +361,15 @@ export const useStore = create<Store>((set, get) => ({
       const tomatoes = [...get().harvestedTomatoes, tomatoFromRecord(record)].slice(-50);
       saveJSON('fp-harvested-tomatoes', tomatoes);
       clearActiveTimer();
-      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, history: h, harvestedTomatoes: tomatoes });
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false, history: h, harvestedTomatoes: tomatoes });
     } else {
       clearActiveTimer();
-      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null });
+      set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false });
     }
   },
   reset: () => {
     clearActiveTimer();
-    set({ state: 'idle', session: 'focus', activeDuration: get().selectedTag.duration, remaining: get().selectedTag.duration, startTime: null });
+    set({ state: 'idle', session: 'focus', activeDuration: get().selectedTag.duration, remaining: get().selectedTag.duration, startTime: null, focusMode: false });
   },
   tick: () => {
     const { state, startTime, activeDuration } = get();
@@ -514,4 +527,42 @@ export const useStore = create<Store>((set, get) => ({
   toggle24HourTime: () => { const v = !get().use24HourTime; saveJSON('fp-24-hour-time', v); set({ use24HourTime: v }); },
   toggleDisplayTomatoes: () => { const v = !get().displayTomatoes; saveJSON('fp-display-tomatoes', v); set({ displayTomatoes: v }); },
   setTiltTomatoes: (v) => { saveJSON('fp-tilt-tomatoes', v); set({ tiltTomatoes: v }); },
+
+  // Achievements
+  unlockedAchievements: new Set(loadJSON<AchievementId[]>('fp-unlocked-achievements', [])),
+  celebratingAchievement: null,
+  setCelebratingAchievement: (id) => set({ celebratingAchievement: id }),
+  checkAndUnlockAchievements: () => {
+    const state = get();
+    const completedCount = state.history.filter(r => r.completed).length;
+    const unlocked = state.unlockedAchievements;
+
+    // Check milestone achievements
+    if (completedCount === 1 && !unlocked.has('first-pomodoro')) {
+      const newUnlocked = new Set(unlocked).add('first-pomodoro');
+      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
+      set({ unlockedAchievements: newUnlocked });
+      return 'first-pomodoro';
+    }
+    if (completedCount === 10 && !unlocked.has('milestone-10')) {
+      const newUnlocked = new Set(unlocked).add('milestone-10');
+      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
+      set({ unlockedAchievements: newUnlocked });
+      return 'milestone-10';
+    }
+    if (completedCount === 50 && !unlocked.has('milestone-50')) {
+      const newUnlocked = new Set(unlocked).add('milestone-50');
+      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
+      set({ unlockedAchievements: newUnlocked });
+      return 'milestone-50';
+    }
+    if (completedCount === 100 && !unlocked.has('milestone-100')) {
+      const newUnlocked = new Set(unlocked).add('milestone-100');
+      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
+      set({ unlockedAchievements: newUnlocked });
+      return 'milestone-100';
+    }
+
+    return null;
+  },
 }));
