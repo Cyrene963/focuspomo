@@ -45,6 +45,7 @@ export default function TomatoPhysics() {
   const [yellowImg, setYellowImg] = useState<HTMLImageElement | null>(null);
   const [motionStatus, setMotionStatus] = useState<MotionStatus>("unknown");
   const motionCleanupRef = useRef<(() => void) | null>(null);
+  const motionInitializedRef = useRef(false);
   // Tilt debug HUD: enable with ?tiltdebug=1 or localStorage fp-tilt-debug=1.
   const [tiltDebug, setTiltDebug] = useState(false);
   const [tiltDbg, setTiltDbg] = useState<null | { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }>(null);
@@ -59,6 +60,22 @@ export default function TomatoPhysics() {
   useEffect(() => {
     loadImage("/tomato-red.svg").then(img => { redImgRef.current = img; setRedImg(img); }).catch(() => {});
     loadImage("/tomato-yellow.svg").then(img => { yellowImgRef.current = img; setYellowImg(img); }).catch(() => {});
+
+    // 从localStorage恢复授权状态，如果之前授权过，自动启动重力感应
+    try {
+      const savedStatus = localStorage.getItem("fp-motion-permission");
+      if (savedStatus === "granted") {
+        motionInitializedRef.current = true;
+        // 延迟一点，等engine初始化完成后自动启动
+        setTimeout(() => {
+          if (tiltTomatoes) {
+            enableMotion();
+          }
+        }, 500);
+      } else if (savedStatus === "denied") {
+        setMotionStatus("denied");
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -217,6 +234,11 @@ export default function TomatoPhysics() {
   }, [displayTomatoes]);
 
   const enableMotion = async () => {
+    // 如果已经初始化过且在active状态，不重复请求
+    if (motionInitializedRef.current && motionStatus === "active") {
+      return;
+    }
+
     const requestPermission = motionPermissionApi();
     try {
       setTiltTomatoes(true);
@@ -224,8 +246,10 @@ export default function TomatoPhysics() {
         const result = await requestPermission();
         if (result !== "granted") {
           setMotionStatus("denied");
+          localStorage.setItem("fp-motion-permission", "denied");
           return;
         }
+        localStorage.setItem("fp-motion-permission", "granted");
       }
       const engine = engineRef.current;
       if (!engine) return;
@@ -288,6 +312,7 @@ export default function TomatoPhysics() {
         resetGravity();
       };
       setMotionStatus("active");
+      motionInitializedRef.current = true;
     } catch {
       setMotionStatus("denied");
     }

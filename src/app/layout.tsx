@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1, // 禁用双击缩放，避免 300ms 延迟
   viewportFit: "cover",
   themeColor: "#FFF8F0",
 };
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href={`/favicon-${TS}-32.png`} type="image/png" sizes="32x32" />
         <link rel="icon" href={`/favicon-${TS}-16.png`} type="image/png" sizes="16x16" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="152x152" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="167x167" />
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#E8644E" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#FFF8F0" />

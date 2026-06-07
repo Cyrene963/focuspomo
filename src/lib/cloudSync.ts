@@ -16,6 +16,7 @@ export const SNAPSHOT_KEYS = [
   "fp-tilt-tomatoes",
   "fp-active-timer",
   "fp-theme",
+  "fp-unlocked-achievements",
 ] as const;
 
 export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
