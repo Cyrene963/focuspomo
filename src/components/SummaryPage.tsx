@@ -169,9 +169,16 @@ export default function SummaryPage() {
               </div>
             ) : monthlyCompleted.slice(-42).map(r => (
               <div key={r.id} title={`${r.tagName} ${Math.round(r.actualDuration / 60)}分`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ width: "clamp(26px, 7vw, 40px)", height: "clamp(26px, 7vw, 40px)", borderRadius: "50%", background: r.tagColor || "var(--accent)", boxShadow: `0 8px 18px ${(r.tagColor || "#E8644E")}33`, position: "relative" }}>
-                  <div style={{ position: "absolute", top: -2, left: "50%", transform: "translateX(-50%) rotate(-10deg)", width: 10, height: 7, borderRadius: "9px 9px 2px 2px", background: "var(--leaf)" }} />
-                </div>
+                <img
+                  src={"/tomato-red.svg"}
+                  alt="完成的番茄"
+                  style={{
+                    width: "clamp(26px, 7vw, 40px)",
+                    height: "auto",
+                    aspectRatio: "107 / 125",
+                    filter: `drop-shadow(0 8px 18px ${(r.tagColor || "#E8644E")}33)`,
+                  }}
+                />
                 <span style={{ fontSize: 9, color: "var(--text-sec)" }}>{Math.round(r.actualDuration / 60)}分</span>
               </div>
             ))}

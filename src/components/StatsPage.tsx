@@ -160,8 +160,10 @@ export default function StatsPage() {
                 alt={r.completed ? "完成的番茄" : "中断的番茄"}
                 style={{
                   width: "100%",
+                  height: "auto",
                   aspectRatio: "107 / 125",
-                  filter: "drop-shadow(0 2px 8px rgba(232,100,78,0.2))",
+                  filter: "drop-shadow(0 2px 6px rgba(232,100,78,0.15))",
+                  maxWidth: "36px",
                 }}
               />
             ))}
