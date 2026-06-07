@@ -72,10 +72,13 @@ export default function AppShell() {
   return (
     <div style={{ position: "fixed", inset: 0, height: "var(--app-height, 100dvh)", background: "var(--bg)", overflow: "hidden", transition: "background 0.4s", zIndex: 1 }}>
       {shouldShowTomatoes && <TomatoPhysics />}
-      {focusMode ? (
-        <TimerPage />
-      ) : (
-        <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
+        {focusMode ? (
+          <GestureWrapper key="focus-mode" enterX={0} enterY={0}>
+            <TimerPage />
+          </GestureWrapper>
+        ) : (
+          <>
           {page === "timer" && (
             <GestureWrapper key="timer" enterX={0} enterY={0}
               onSwipeLeft={swipeLeft}
@@ -123,8 +126,9 @@ export default function AppShell() {
               <SummaryPage />
             </GestureWrapper>
           )}
-        </AnimatePresence>
-      )}
+          </>
+        )}
+      </AnimatePresence>
 
       {!focusMode && (
         <div style={{

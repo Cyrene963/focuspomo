@@ -159,6 +159,8 @@ export default function SettingsPage() {
       overflow: "auto",
       paddingBottom: 120,
       transition: "background 0.25s",
+      WebkitOverflowScrolling: "touch",
+      willChange: "transform",
     }}>
       <div style={{ padding: "56px 28px 18px" }}>
         <div style={{ fontSize: "clamp(28px, 6vw, 36px)", fontWeight: 850, color: "var(--text)", letterSpacing: "-0.04em" }}>设置</div>

@@ -252,7 +252,7 @@ export default function TasksPage() {
   }, [active]);
 
   return (
-    <div style={{ height: "100%", width: "100%", background: "var(--bg)", overflow: "auto", padding: "52px 0 124px", transition: "background 0.4s" }}>
+    <div style={{ height: "100%", width: "100%", background: "var(--bg)", overflow: "auto", padding: "52px 0 124px", transition: "background 0.4s", WebkitOverflowScrolling: "touch", willChange: "transform" }}>
       <div style={{ padding: "0 24px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <div>
           <div style={{ fontSize: "clamp(28px, 6vw, 36px)", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.045em" }}>今天三件事</div>
