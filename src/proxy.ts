@@ -13,7 +13,7 @@ const NO_STORE_PATHS = [
   /^\/mask-icon\.svg$/,
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const response = NextResponse.next();
   if (NO_STORE_PATHS.some((rx) => rx.test(request.nextUrl.pathname))) {
     response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
