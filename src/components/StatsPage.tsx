@@ -150,7 +150,7 @@ export default function StatsPage() {
             </div>
           </div>
           {/* Tomato grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
             {recentTomatoes.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 32, color: "var(--text-sec)", fontSize: 13 }}>还没有番茄</div>
             ) : recentTomatoes.map(r => (
@@ -163,7 +163,6 @@ export default function StatsPage() {
                   height: "auto",
                   aspectRatio: "107 / 125",
                   filter: "drop-shadow(0 2px 6px rgba(232,100,78,0.15))",
-                  maxWidth: "36px",
                 }}
               />
             ))}
