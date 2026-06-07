@@ -124,12 +124,19 @@ export default function StatsPage() {
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
             {barBuckets.map((bar, i) => (
               <div key={`${period}-${bar.label}`} aria-label={bar.aria} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                {bar.mins > 0 && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", marginBottom: -4 }}>
+                    {bar.mins >= 60 ? `${Math.floor(bar.mins/60)}h${bar.mins%60 > 0 ? bar.mins%60 : ''}` : `${bar.mins}分`}
+                  </div>
+                )}
                 <div style={{
                   width: "100%", maxWidth: period === "year" ? 22 : 36,
-                  height: `${Math.max((bar.mins / maxBar) * 100, 6)}px`,
-                  background: bar.color, borderRadius: 999,
+                  height: `${Math.max((bar.mins / maxBar) * 100, bar.mins > 0 ? 6 : 3)}px`,
+                  background: bar.mins > 0 ? bar.color : "var(--separator)",
+                  borderRadius: 999,
                   transition: "height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                  boxShadow: "0 4px 12px rgba(232,100,78,0.2)",
+                  boxShadow: bar.mins > 0 ? "0 4px 12px rgba(232,100,78,0.2)" : "none",
+                  opacity: bar.mins > 0 ? 1 : 0.3,
                 }} />
                 <span style={{ fontSize: period === "year" ? 9 : 10, color: "var(--text-sec)", fontWeight: 600, writingMode: period === "year" ? "vertical-rl" : "horizontal-tb" }}>{bar.label}</span>
               </div>
