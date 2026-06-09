@@ -69,10 +69,30 @@ function bearerToken(req: Request) {
 function requireAgentToken(req: Request) {
   const expected = process.env.FOCUSPOMO_AGENT_TOKEN;
   const actual = bearerToken(req);
-  if (!expected || !actual) return false;
+  if (!actual) return false;
+  if (!expected) return actual.startsWith("fp_");
+  if (actual.startsWith("fp_")) return true;
   const a = Buffer.from(actual);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function keyHash(key: string) {
+  return crypto.createHash("sha256").update(key).digest("hex");
+}
+
+async function userIdForAgentKey(req: Request) {
+  const token = bearerToken(req);
+  if (!token || !token.startsWith("fp_")) return undefined;
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `UPDATE focuspomo_agent_keys
+        SET last_used_at = now()
+      WHERE key_hash = $1
+      RETURNING user_id`,
+    [keyHash(token)]
+  );
+  return rows[0]?.user_id as string | undefined;
 }
 
 function validString(value: unknown, max: number) {
@@ -147,8 +167,14 @@ async function defaultUserId() {
   return rows[0]?.id as string | undefined;
 }
 
-async function resolveUserId(email?: unknown) {
+async function resolveUserId(req: Request, email?: unknown) {
   await ensureSchema();
+  const token = bearerToken(req);
+  if (token.startsWith("fp_")) {
+    const keyedUserId = await userIdForAgentKey(req);
+    if (!keyedUserId) throw Object.assign(new Error("Invalid agent key"), { status: 401 });
+    return keyedUserId;
+  }
   const userId = validString(email, 320) ? await userIdForEmail(String(email)) : await defaultUserId();
   if (!userId) throw Object.assign(new Error("No FocusPomo user found"), { status: 404 });
   return userId;
@@ -242,7 +268,7 @@ export async function GET(req: Request) {
   if (!requireAgentToken(req)) return unauthorized();
   try {
     const url = new URL(req.url);
-    const userId = await resolveUserId(url.searchParams.get("email") || undefined);
+    const userId = await resolveUserId(req, url.searchParams.get("email") || undefined);
     const snapshot = await loadSnapshot(userId);
     const resource = url.searchParams.get("resource") || "overview";
     const view = resourceView(snapshot.data);
@@ -262,7 +288,7 @@ export async function POST(req: Request) {
   if (!requireAgentToken(req)) return unauthorized();
   try {
     const body = (await req.json()) as AgentTasksPayload & { action?: unknown; taskId?: unknown; patch?: unknown };
-    const userId = await resolveUserId(body.email);
+    const userId = await resolveUserId(req, body.email);
     const snapshot = await loadSnapshot(userId);
     const currentTasks = tasksFrom(snapshot.data);
     const now = Date.now();

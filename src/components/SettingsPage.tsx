@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import CloudSyncPanel from "@/components/CloudSyncPanel";
+import AgentConnectPanel from "@/components/AgentConnectPanel";
 
 function IOSToggle({ value, onToggle, color = "#34C759" }: { value: boolean; onToggle: () => void; color?: string }) {
   return (
@@ -226,6 +227,10 @@ export default function SettingsPage() {
 
       <Section title="云同步">
         <CloudSyncPanel />
+      </Section>
+
+      <Section title="AI AGENT">
+        <AgentConnectPanel />
       </Section>
 
       <Section title="提醒">

@@ -58,13 +58,14 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
     >
       {/* Backdrop */}
       <motion.div
-        initial={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)", WebkitBackdropFilter: "blur(0px) saturate(100%)" }}
-        animate={{ opacity: 1, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" }}
-        exit={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)", WebkitBackdropFilter: "blur(0px) saturate(100%)" }}
+        initial={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)" }}
+        animate={{ opacity: 1, backdropFilter: "blur(24px) saturate(180%)" }}
+        exit={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)" }}
         transition={{ duration: 0.24, ease: modalEase }}
         style={{
           position: "absolute", inset: 0,
           background: "var(--bg-glass-dark)",
+          WebkitBackdropFilter: "blur(24px) saturate(180%)",
         }}
       />
 

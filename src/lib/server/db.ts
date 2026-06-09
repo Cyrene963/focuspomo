@@ -92,6 +92,16 @@ export async function ensureSchema() {
           PRIMARY KEY (user_id, record_id)
         )
       `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS focuspomo_agent_keys (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id uuid NOT NULL REFERENCES focuspomo_users(id) ON DELETE CASCADE,
+          key_hash text UNIQUE NOT NULL,
+          label text NOT NULL DEFAULT 'AI Agent',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          last_used_at timestamptz
+        )
+      `);
     })();
   }
   return migrationsReady;
