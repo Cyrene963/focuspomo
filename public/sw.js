@@ -15,9 +15,9 @@ const PRECACHE_NEXT_STATIC = [
   "/_next/static/chunks/0wb6jdvd3md34.js",
   "/_next/static/chunks/0x2fm~poyyedq.js",
   "/_next/static/chunks/turbopack-17vrofky5om_c.js",
-  "/_next/static/tsHWCUb8O-zOWhCkotqNx/_buildManifest.js",
-  "/_next/static/tsHWCUb8O-zOWhCkotqNx/_clientMiddlewareManifest.js",
-  "/_next/static/tsHWCUb8O-zOWhCkotqNx/_ssgManifest.js"
+  "/_next/static/igpQTpeOmCG3oJIemUWWI/_buildManifest.js",
+  "/_next/static/igpQTpeOmCG3oJIemUWWI/_clientMiddlewareManifest.js",
+  "/_next/static/igpQTpeOmCG3oJIemUWWI/_ssgManifest.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 

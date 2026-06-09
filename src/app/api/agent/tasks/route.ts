@@ -55,6 +55,10 @@ type AgentTasksPayload = {
 };
 
 const MAX_AGENT_TASKS = 3;
+const MAX_TITLE_LENGTH = 500;
+const MAX_NOTES_LENGTH = 1000;
+const MAX_RETURNED_TASKS = 1000;
+const MAX_RETURNED_RECORDS = 1000;
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -66,12 +70,10 @@ function bearerToken(req: Request) {
   return scheme?.toLowerCase() === "bearer" ? token : "";
 }
 
-function requireAgentToken(req: Request) {
+function isInternalToken(req: Request) {
   const expected = process.env.FOCUSPOMO_AGENT_TOKEN;
   const actual = bearerToken(req);
-  if (!actual) return false;
-  if (!expected) return actual.startsWith("fp_");
-  if (actual.startsWith("fp_")) return true;
+  if (!expected || !actual || actual.startsWith("fp_")) return false;
   const a = Buffer.from(actual);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -112,14 +114,14 @@ function nowTaskId(now: number, index: number) {
 
 function normalizeNewTask(input: AgentTaskInput, index: number, now: number, plannedToday = true): TaskItem | null {
   const title = typeof input.title === "string" ? input.title.trim() : "";
-  if (!title || title.length > 500) return null;
+  if (!title || title.length > MAX_TITLE_LENGTH) return null;
   const important = typeof input.important === "boolean" ? input.important : true;
   const urgent = typeof input.urgent === "boolean" ? input.urgent : index === 0;
   const estimated = typeof input.estimatedPomodoros === "number" && Number.isFinite(input.estimatedPomodoros)
     ? Math.max(1, Math.min(8, Math.round(input.estimatedPomodoros)))
     : 1;
   const dueDate = typeof input.dueDate === "number" && Number.isFinite(input.dueDate) ? input.dueDate : undefined;
-  const notes = typeof input.notes === "string" && input.notes.trim().length > 0 ? input.notes.trim().slice(0, 1000) : undefined;
+  const notes = typeof input.notes === "string" && input.notes.trim().length > 0 ? input.notes.trim().slice(0, MAX_NOTES_LENGTH) : undefined;
   return {
     id: validString(input.id, 120) ? String(input.id).trim() : nowTaskId(now, index),
     title,
@@ -141,7 +143,7 @@ function patchTask(task: TaskItem, patch: AgentTaskInput, now: number): TaskItem
   const completed = typeof patch.completed === "boolean" ? patch.completed : task.completed;
   return {
     ...task,
-    title: validString(patch.title, 500) ? String(patch.title).trim() : task.title,
+    title: validString(patch.title, MAX_TITLE_LENGTH) ? String(patch.title).trim() : task.title,
     notes: typeof patch.notes === "string" ? (patch.notes.trim() || undefined) : task.notes,
     important: typeof patch.important === "boolean" ? patch.important : task.important,
     urgent: typeof patch.urgent === "boolean" ? patch.urgent : task.urgent,
@@ -175,6 +177,7 @@ async function resolveUserId(req: Request, email?: unknown) {
     if (!keyedUserId) throw Object.assign(new Error("Invalid agent key"), { status: 401 });
     return keyedUserId;
   }
+  if (!isInternalToken(req)) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   const userId = validString(email, 320) ? await userIdForEmail(String(email)) : await defaultUserId();
   if (!userId) throw Object.assign(new Error("No FocusPomo user found"), { status: 404 });
   return userId;
@@ -233,12 +236,12 @@ function endOfWeek(ms = Date.now()) {
 
 function resourceView(data: Snapshot) {
   const tasks = tasksFrom(data);
-  const records = recordsFrom(data).sort((a, b) => b.startTime - a.startTime);
+  const records = recordsFrom(data).sort((a, b) => b.startTime - a.startTime).slice(0, MAX_RETURNED_RECORDS);
   const today = todayStart();
   const weekStart = startOfWeek();
   const weekEnd = endOfWeek();
   return {
-    tasks,
+    tasks: tasks.slice(0, MAX_RETURNED_TASKS),
     todayTasks: tasks
       .filter(task => task.plannedToday)
       .sort((a, b) => Number(a.completed) - Number(b.completed) || b.updatedAt - a.updatedAt)
@@ -265,7 +268,7 @@ function apiError(err: unknown) {
 }
 
 export async function GET(req: Request) {
-  if (!requireAgentToken(req)) return unauthorized();
+  if (!bearerToken(req)) return unauthorized();
   try {
     const url = new URL(req.url);
     const userId = await resolveUserId(req, url.searchParams.get("email") || undefined);
@@ -285,7 +288,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!requireAgentToken(req)) return unauthorized();
+  if (!bearerToken(req)) return unauthorized();
   try {
     const body = (await req.json()) as AgentTasksPayload & { action?: unknown; taskId?: unknown; patch?: unknown };
     const userId = await resolveUserId(req, body.email);
