@@ -28,11 +28,12 @@ export async function GET() {
         : null,
     });
   } catch (err) {
-    // If user is not authenticated, return empty snapshot instead of 401
-    // This prevents console noise when not logged in
+    // If user is not authenticated, return an explicit local-only state instead
+    // of a bare empty snapshot. The app can stay quiet, while API consumers do
+    // not mistake "snapshot:null" for an authenticated empty cloud account.
     const status = typeof err === "object" && err && "status" in err ? Number((err as { status?: number }).status) : 500;
     if (status === 401) {
-      return NextResponse.json({ snapshot: null });
+      return NextResponse.json({ authenticated: false, snapshot: null });
     }
     return apiError(err);
   }

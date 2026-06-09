@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Matter from "matter-js";
 import { useStore, type HarvestedTomato } from "@/lib/store";
 import { gravityFromDeviceMotion, gravityFromDeviceOrientation, resolveScreenAngle } from "@/lib/motionGravity";
+import { tomatoVisualSize } from "@/lib/tomatoVisuals";
 
 const { Engine, Bodies, Composite, Body } = Matter;
 
@@ -155,9 +156,8 @@ export default function TomatoPhysics() {
   const addTomatoBody = (tomato: HarvestedTomato, replay = false) => {
     if (!engineRef.current || !canvasRef.current || drawnTomatoIdsRef.current.has(tomato.id)) return;
     const canvas = canvasRef.current;
-    const tomatoBodyScale = Math.max(tomato.durationSeconds, 60) / (25 * 60);
-    const scale = Math.min(tomatoBodyScale, 2.5);
-    const radius = (18 + scale * 8) * (window.devicePixelRatio || 1);
+    const visualWidth = tomatoVisualSize(tomato.durationSeconds, "summary");
+    const radius = (visualWidth / 2) * (window.devicePixelRatio || 1);
     const x = canvas.width * 0.18 + Math.random() * canvas.width * 0.64;
     const y = replay ? canvas.height - radius * (1.8 + Math.random() * 4) : -radius * 3;
     const body = Bodies.circle(x, y, radius, {
@@ -167,6 +167,11 @@ export default function TomatoPhysics() {
     });
     (body as Matter.Body & { circleRadius?: number }).circleRadius = radius;
     (body as Matter.Body & { isCompleted?: boolean }).isCompleted = tomato.completed;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("focuspomo:tomato-body-added", {
+        detail: { id: tomato.id, completed: tomato.completed, durationSeconds: tomato.durationSeconds, radius: radius / (window.devicePixelRatio || 1) },
+      }));
+    }
     Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.16);
     Body.setVelocity(body, { x: (Math.random() - 0.5) * 3, y: replay ? 0 : 1 });
     Composite.add(engineRef.current.world, body);

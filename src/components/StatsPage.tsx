@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
+import { tomatoVisualSize, tomatoWallGridStyle } from "@/lib/tomatoVisuals";
 
 const PERIODS = ["week", "month", "year"] as const;
 const PERIOD_LABELS = { week: "本周", month: "本月", year: "今年" } as const;
@@ -10,9 +11,25 @@ type BarBucket = { label: string; mins: number; color: string; aria: string };
 
 function startOfWeek(d: Date) {
   const r = new Date(d);
-  r.setDate(r.getDate() - r.getDay());
+  const day = r.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  r.setDate(r.getDate() + diff);
   r.setHours(0, 0, 0, 0);
   return r;
+}
+
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function startOfYear(d: Date) {
+  return new Date(d.getFullYear(), 0, 1);
+}
+
+function periodStart(period: typeof PERIODS[number], now = new Date()) {
+  if (period === "week") return startOfWeek(now);
+  if (period === "month") return startOfMonth(now);
+  return startOfYear(now);
 }
 
 function bucketRecords(records: ReturnType<typeof useStore.getState>["history"], period: typeof PERIODS[number]): BarBucket[] {
@@ -31,13 +48,14 @@ function bucketRecords(records: ReturnType<typeof useStore.getState>["history"],
     return Array.from({ length: 7 }, (_, i) => {
       const start = i * bucketSize + 1;
       const end = Math.min(daysInMonth, start + bucketSize - 1);
+      if (start > daysInMonth) return null;
       const mins = Math.round(records.filter(r => {
         const d = new Date(r.startTime).getDate();
         return d >= start && d <= end;
       }).reduce((s, r) => s + r.actualDuration, 0) / 60);
       const label = `${start}-${end}`;
       return { label, mins, color: "var(--accent)", aria: `${label}日 ${mins}分钟` };
-    });
+    }).filter(Boolean) as BarBucket[];
   }
   return Array.from({ length: 12 }, (_, i) => {
     const mins = Math.round(records.filter(r => new Date(r.startTime).getMonth() === i).reduce((s, r) => s + r.actualDuration, 0) / 60);
@@ -50,13 +68,8 @@ export default function StatsPage() {
   const [period, setPeriod] = useState<typeof PERIODS[number]>("week");
 
   const filtered = useMemo(() => {
-    const now = new Date();
-    return history.filter(r => {
-      const d = new Date(r.startTime);
-      if (period === "week") { const ws = new Date(now); ws.setDate(now.getDate() - now.getDay()); ws.setHours(0,0,0,0); return d >= ws; }
-      if (period === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      return d.getFullYear() === now.getFullYear();
-    });
+    const start = periodStart(period);
+    return history.filter(r => new Date(r.startTime) >= start);
   }, [history, period]);
 
   const totalMin = Math.round(filtered.reduce((s, r) => s + r.actualDuration, 0) / 60);
@@ -72,13 +85,25 @@ export default function StatsPage() {
     return [...m.values()].sort((a, b) => b.mins - a.mins);
   }, [filtered]);
 
-  const recentTomatoes = useMemo(() => [...history].slice(-35).reverse(), [history]);
+  const visibleTomatoes = useMemo(() => {
+    return [...filtered]
+      .sort((a, b) => a.startTime - b.startTime)
+      .slice(-35);
+  }, [filtered]);
 
-  const streak = useMemo(() => {
+  const streakInfo = useMemo(() => {
     const days = new Set(history.filter(r => r.completed).map(r => new Date(r.startTime).toDateString()));
-    let c = 0; const d = new Date();
-    while (days.has(d.toDateString())) { c++; d.setDate(d.getDate() - 1); }
-    return c;
+    let current = 0; const d = new Date();
+    while (days.has(d.toDateString())) { current++; d.setDate(d.getDate() - 1); }
+    const sorted = [...days].map(x => new Date(x).getTime()).sort((a, b) => a - b);
+    let longest = 0, run = 0, prev = 0;
+    for (const t of sorted) {
+      run = prev && Math.round((t - prev) / 86400000) === 1 ? run + 1 : 1;
+      longest = Math.max(longest, run);
+      prev = t;
+    }
+    const latest = sorted.length ? new Date(sorted[sorted.length - 1]).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }) : "无";
+    return { current, longest, latest };
   }, [history]);
 
   const cardStyle: React.CSSProperties = {
@@ -157,34 +182,50 @@ export default function StatsPage() {
             </div>
           </div>
           {/* Tomato grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-            {recentTomatoes.length === 0 ? (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 32, color: "var(--text-sec)", fontSize: 13 }}>还没有番茄</div>
-            ) : recentTomatoes.map(r => (
-              <img
-                key={r.id}
-                src={r.completed ? "/tomato-red.svg" : "/tomato-yellow.svg"}
-                alt={r.completed ? "完成的番茄" : "中断的番茄"}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  aspectRatio: "107 / 125",
-                  filter: "drop-shadow(0 2px 6px rgba(232,100,78,0.15))",
-                }}
-              />
-            ))}
+          <div style={tomatoWallGridStyle("stats")}>
+            {visibleTomatoes.length === 0 ? (
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 32, color: "var(--text-sec)", fontSize: 13, lineHeight: 1.6 }}>{PERIOD_LABELS[period]}还没有番茄。完成会收获红番茄，中断也会留下黄色番茄。</div>
+            ) : visibleTomatoes.map(r => {
+              const size = tomatoVisualSize(r.actualDuration, "stats");
+              const minutes = Math.round(r.actualDuration / 60);
+              const tomatoKind = r.completed ? "完成的红番茄" : "中断的黄番茄";
+              return (
+                <div
+                  key={r.id}
+                  title={`${tomatoKind} · ${r.tagName} ${minutes}分`}
+                  aria-label={`${tomatoKind}，${minutes}分钟`}
+                  style={{
+                    height: 54,
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                  }}
+                >
+                  <img
+                    src={r.completed ? "/tomato-red.svg" : "/tomato-yellow.svg"}
+                    alt={tomatoKind}
+                    style={{
+                      width: size,
+                      height: "auto",
+                      aspectRatio: "107 / 125",
+                      filter: "drop-shadow(0 2px 6px rgba(232,100,78,0.15))",
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* ALL DATA */}
+        {/* PERIOD SUMMARY */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>累计番茄</div>
-            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{history.filter(r => r.completed).length}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>{PERIOD_LABELS[period]}番茄</div>
+            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{completed}</div>
           </div>
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>累计小时</div>
-            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{Math.round(history.reduce((s, r) => s + r.actualDuration, 0) / 3600)}小时</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>{PERIOD_LABELS[period]}小时</div>
+            <div style={{ fontSize: "clamp(32px, 7vw, 44px)", fontWeight: 800, color: "var(--accent)" }}>{Math.round(filtered.reduce((s, r) => s + r.actualDuration, 0) / 3600)}小时</div>
           </div>
         </div>
 
@@ -192,7 +233,8 @@ export default function StatsPage() {
         <div style={{ ...cardStyle, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-sec)", letterSpacing: 0.5, marginBottom: 8 }}>连续专注</div>
-            <div style={{ fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 800, color: "var(--text)" }}>{streak} 天 🔥</div>
+            <div style={{ fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 800, color: "var(--text)" }}>{streakInfo.current} 天 🔥</div>
+            <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.45 }}>最长 {streakInfo.longest} 天 · 最近活跃 {streakInfo.latest}</div>
           </div>
           <div style={{
             width: 56, height: 56, borderRadius: 20,

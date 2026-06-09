@@ -49,7 +49,7 @@ function notifyDone(enabled: boolean, title: string, body: string) {
 }
 
 export default function TimerPage() {
-  const { state, session, selectedTag, remaining, muted, vibration, notificationsEnabled, start, startBreak, interrupt, tick, toggleMute, reset, setPage } = useStore();
+  const { state, session, selectedTag, remaining, muted, vibration, notificationsEnabled, start, startBreak, interrupt, tick, toggleMute, reset, setPage, history } = useStore();
 
   const swipeLeft = useCallback(() => {
     const next = swipeLeftFrom("timer");
@@ -72,6 +72,12 @@ export default function TimerPage() {
   const isCompleted = state === "completed";
   const isBreak = session !== "focus";
   const sessionLabel = session === "shortBreak" ? "短休息" : session === "longBreak" ? "长休息" : selectedTag.name;
+  const todayKey = new Date().toDateString();
+  const completedDays = new Set(history.filter(r => r.completed).map(r => new Date(r.startTime).toDateString()));
+  const todayPomodoros = history.filter(r => r.completed && new Date(r.startTime).toDateString() === todayKey).length;
+  let currentStreak = 0;
+  for (const d = new Date(); completedDays.has(d.toDateString()); d.setDate(d.getDate() - 1)) currentStreak++;
+  const nextAchievement = history.filter(r => r.completed).length < 10 ? "10 番茄里程碑" : history.filter(r => r.completed).length < 50 ? "50 番茄里程碑" : "100 番茄里程碑";
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
 
@@ -195,6 +201,49 @@ export default function TimerPage() {
         )}
       </AnimatePresence>
 
+      {/* Visible stop control: hold/swipe remains playful, but stopping must be discoverable. */}
+      <AnimatePresence>
+        {isActive && (
+          <motion.button
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
+              setHoldActive(false);
+              setIsStopping(true);
+              window.setTimeout(() => {
+                interrupt();
+                setIsStopping(false);
+              }, 120);
+            }}
+            className="pressable"
+            aria-label={`结束当前${sessionLabel}`}
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: "max(152px, calc(env(safe-area-inset-bottom) + 128px))",
+              transform: "translateX(-50%)",
+              zIndex: 32,
+              minWidth: 136,
+              minHeight: 46,
+              borderRadius: 999,
+              background: "rgba(45,38,37,0.12)",
+              color: "var(--text)",
+              border: "1px solid rgba(45,38,37,0.08)",
+              backdropFilter: "blur(18px) saturate(160%)",
+              WebkitBackdropFilter: "blur(18px) saturate(160%)",
+              fontSize: 14,
+              fontWeight: 850,
+              boxShadow: "0 12px 28px rgba(45,38,37,0.10)",
+            }}
+          >
+            结束本轮
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* ===== CONTENT LAYER (z-index 1) ===== */}
       <div style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", overflow: "hidden" }}>
         <AnimatePresence mode="wait" initial={false}>
@@ -242,8 +291,10 @@ export default function TimerPage() {
                 <svg width="14" height="14" viewBox="0 0 8 12" fill="none" stroke="var(--text)" strokeWidth="1.5" strokeLinecap="round"><path d="M1 1l5 5-5 5" /></svg>
               </motion.button>
 
-              <div style={{ marginTop: 24, fontSize: 13, fontWeight: 600, color: "var(--text-sec)" }}>
-                完成后会收获一个小番茄
+              <div style={{ marginTop: 24, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", color: "var(--text-sec)" }}>
+                {[`今日 ${todayPomodoros} 🍅`, `连续 ${currentStreak} 天`, `下一个：${nextAchievement}`].map(item => (
+                  <span key={item} style={{ fontSize: 12, fontWeight: 800, padding: "7px 10px", borderRadius: 999, background: "rgba(45,38,37,0.06)" }}>{item}</span>
+                ))}
               </div>
 
               <div />
@@ -289,8 +340,10 @@ export default function TimerPage() {
                 {mm}:{ss}
               </motion.span>
               {isBreak && (
-                <div style={{ position: "absolute", top: "58%", fontSize: 17, fontWeight: 700, color: "var(--text-sec)" }}>
-                  {sessionLabel}
+                <div style={{ position: "absolute", top: "58%", textAlign: "center", display: "grid", gap: 8 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text-sec)" }}>
+                    {sessionLabel}
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -385,7 +438,7 @@ export default function TimerPage() {
         >
           {/* Progress bar + text */}
           <div style={{
-            position: "absolute", bottom: 80, left: "50%", transform: "translateX(-50%)",
+            position: "absolute", bottom: "max(96px, calc(env(safe-area-inset-bottom) + 72px))", left: "50%", transform: "translateX(-50%)",
             display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
           }}>
             <span style={{

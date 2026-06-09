@@ -80,7 +80,7 @@ function canSplitTaskTitle(title: string) {
 }
 
 function TaskRow({ task, compact = false }: { task: TaskItem; compact?: boolean }) {
-  const { toggleTask, updateTask, deleteTask, splitTask } = useStore();
+  const { toggleTask, updateTask, deleteTask, splitTask, startTask } = useStore();
   const q = quadrantOf(task);
   const meta = QUADRANT_META[q];
   const canSplit = canSplitTaskTitle(task.title);
@@ -138,6 +138,18 @@ function TaskRow({ task, compact = false }: { task: TaskItem; compact?: boolean 
       </div>
       {!compact && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+          {!task.completed && (
+            <button
+              type="button"
+              className="pressable"
+              onClick={() => startTask(task.id)}
+              aria-label={`开始任务：${task.title}`}
+              title="用当前番茄开始这个任务"
+              style={{ minWidth: 44, minHeight: 44, borderRadius: 18, padding: "8px 10px", background: "var(--accent)", color: "white", fontSize: 12, fontWeight: 900 }}
+            >
+              开始
+            </button>
+          )}
           {canSplit && (
             <button
               type="button"
@@ -205,15 +217,15 @@ function NewTaskForm() {
             fontWeight: 650,
           }}
         />
-        <button type="button" onClick={submit} className="pressable" style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--text)", color: "var(--bg)", fontSize: 24, fontWeight: 700 }}>+</button>
+        <button type="button" onClick={submit} aria-label="添加任务" className="pressable" style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--text)", color: "var(--bg)", fontSize: 24, fontWeight: 700 }}>+</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, marginTop: 12, alignItems: "center" }}>
-        <button type="button" onClick={() => setImportant(v => !v)} className="pressable" style={{ borderRadius: 16, padding: "9px 10px", background: important ? "rgba(232,100,78,0.14)" : "var(--control-bg)", color: important ? "var(--accent)" : "var(--text-sec)", fontSize: 13, fontWeight: 800 }}>重要</button>
-        <button type="button" onClick={() => setUrgent(v => !v)} className="pressable" style={{ borderRadius: 16, padding: "9px 10px", background: urgent ? "rgba(212,168,42,0.18)" : "var(--control-bg)", color: urgent ? "#B98500" : "var(--text-sec)", fontSize: 13, fontWeight: 800 }}>紧急</button>
+        <button type="button" aria-pressed={important} onClick={() => setImportant(v => !v)} className="pressable" style={{ borderRadius: 16, padding: "9px 10px", background: important ? "rgba(232,100,78,0.14)" : "var(--control-bg)", color: important ? "var(--accent)" : "var(--text-sec)", fontSize: 13, fontWeight: 800 }}>重要</button>
+        <button type="button" aria-pressed={urgent} onClick={() => setUrgent(v => !v)} className="pressable" style={{ borderRadius: 16, padding: "9px 10px", background: urgent ? "rgba(212,168,42,0.18)" : "var(--control-bg)", color: urgent ? "#B98500" : "var(--text-sec)", fontSize: 13, fontWeight: 800 }}>紧急</button>
         <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-sec)", fontSize: 13, fontWeight: 800 }}>
-          <button type="button" className="pressable" onClick={() => setEstimated(v => Math.max(1, v - 1))} style={{ width: 28, height: 28, borderRadius: 14, background: "var(--control-bg)", color: "var(--text)" }}>−</button>
+          <button type="button" aria-label="减少预计番茄" className="pressable" onClick={() => setEstimated(v => Math.max(1, v - 1))} style={{ width: 44, height: 44, borderRadius: 22, background: "var(--control-bg)", color: "var(--text)" }}>−</button>
           {estimated}🍅
-          <button type="button" className="pressable" onClick={() => setEstimated(v => Math.min(8, v + 1))} style={{ width: 28, height: 28, borderRadius: 14, background: "var(--control-bg)", color: "var(--text)" }}>+</button>
+          <button type="button" aria-label="增加预计番茄" className="pressable" onClick={() => setEstimated(v => Math.min(8, v + 1))} style={{ width: 44, height: 44, borderRadius: 22, background: "var(--control-bg)", color: "var(--text)" }}>+</button>
         </div>
       </div>
       <button type="button" onClick={smartPlanToday} className="pressable" style={{ marginTop: 12, width: "100%", borderRadius: 18, padding: "11px 12px", background: "rgba(85,166,122,0.13)", color: "var(--leaf)", fontSize: 13, fontWeight: 850 }}>

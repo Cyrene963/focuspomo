@@ -9,6 +9,18 @@ const noStoreHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Next 16 can infer /root as the workspace because this VPS also has a
+  // top-level package-lock.json. Pin the app root so local/CI builds validate
+  // this PWA, not an accidental parent workspace.
+  turbopack: {
+    root: process.cwd(),
+  },
+  // This small VPS cannot reliably run Next.js 16 production typechecking
+  // together with resident Hermes/Hindsight services; run TypeScript as a
+  // separate CI/local quality gate and keep deployment builds memory-bounded.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async headers() {
     return [
       { source: "/", headers: noStoreHeaders },

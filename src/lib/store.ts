@@ -25,6 +25,8 @@ export interface PomodoroRecord {
   startTime: number;
   endTime: number;
   completed: boolean;
+  taskId?: string;
+  taskTitle?: string;
 }
 
 export interface HarvestedTomato {
@@ -56,6 +58,7 @@ interface ActiveTimerSnapshot {
   tagId: string;
   activeDuration: number;
   startTime: number;
+  taskId?: string;
 }
 
 interface Store {
@@ -85,6 +88,7 @@ interface Store {
 
   // Timer actions
   start: () => void;
+  startTask: (taskId: string) => void;
   startBreak: () => void;
   complete: () => void;
   interrupt: () => void;
@@ -150,7 +154,7 @@ function saveActiveTimer(snapshot: ActiveTimerSnapshot) {
   saveJSON('fp-active-timer', snapshot);
 }
 
-function buildCompletedRecord(tag: Tag, activeDuration: number, startTime: number): PomodoroRecord {
+function buildCompletedRecord(tag: Tag, activeDuration: number, startTime: number, task?: TaskItem): PomodoroRecord {
   return {
     id: crypto.randomUUID(),
     tagId: tag.id,
@@ -161,10 +165,12 @@ function buildCompletedRecord(tag: Tag, activeDuration: number, startTime: numbe
     startTime,
     endTime: startTime + activeDuration * 1000,
     completed: true,
+    taskId: task?.id,
+    taskTitle: task?.title,
   };
 }
 
-function buildInterruptedRecord(tag: Tag, activeDuration: number, startTime: number, endTime: number): PomodoroRecord {
+function buildInterruptedRecord(tag: Tag, activeDuration: number, startTime: number, endTime: number, task?: TaskItem): PomodoroRecord {
   const actualDuration = Math.max(0, Math.round((endTime - startTime) / 1000));
   return {
     id: crypto.randomUUID(),
@@ -176,6 +182,8 @@ function buildInterruptedRecord(tag: Tag, activeDuration: number, startTime: num
     startTime,
     endTime,
     completed: false,
+    taskId: task?.id,
+    taskTitle: task?.title,
   };
 }
 
@@ -188,14 +196,16 @@ function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
   };
 }
 
-const MIN_INTERRUPTED_RECORD_SECONDS = 5 * 60;
+const MIN_INTERRUPTED_RECORD_SECONDS = 1;
 
 function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activeDuration: number) {
   const history = loadJSON<PomodoroRecord[]>('fp-history', []);
   const endTime = snapshot.startTime + activeDuration * 1000;
   const alreadyRecorded = history.some(record => record.completed && Math.abs(record.endTime - endTime) < 1000);
   if (!alreadyRecorded) {
-    const record = buildCompletedRecord(tag, activeDuration, snapshot.startTime);
+    const tasks = loadJSON<TaskItem[]>('fp-tasks', []);
+    const task = snapshot.taskId ? tasks.find(t => t.id === snapshot.taskId) : undefined;
+    const record = buildCompletedRecord(tag, activeDuration, snapshot.startTime, task);
     const nextHistory = [...history, record];
     saveJSON('fp-history', nextHistory);
     const tomatoes = [...loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []), tomatoFromRecord(record)].slice(-50);
@@ -293,6 +303,14 @@ export const useStore = create<Store>((set, get) => ({
     saveActiveTimer({ state: 'running', session: 'focus', tagId: selectedTag.id, activeDuration: selectedTag.duration, startTime });
     set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime, page: 'timer', focusMode: true });
   },
+  startTask: (taskId) => {
+    const { selectedTag, tasks } = get();
+    const task = tasks.find(t => t.id === taskId && !t.completed);
+    if (!task) return;
+    const startTime = Date.now();
+    saveActiveTimer({ state: 'running', session: 'focus', tagId: selectedTag.id, activeDuration: selectedTag.duration, startTime, taskId });
+    set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime, page: 'timer', focusMode: true });
+  },
   startBreak: () => {
     const { shortBreak, longBreak, cycleCount, pomodoroCycle, selectedTag } = get();
     const useLongBreak = cycleCount > 0 && cycleCount % Math.max(1, pomodoroCycle) === 0;
@@ -309,7 +327,7 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
   complete: () => {
-    const { selectedTag, startTime, history, cycleCount, session, activeDuration } = get();
+    const { selectedTag, startTime, history, cycleCount, session, activeDuration, tasks } = get();
     if (session !== 'focus') {
       clearActiveTimer();
       set({ state: 'completed', remaining: 0, startTime: null });
@@ -317,7 +335,7 @@ export const useStore = create<Store>((set, get) => ({
     }
     const now = Date.now();
     const record: PomodoroRecord = startTime
-      ? buildCompletedRecord(selectedTag, activeDuration, startTime)
+      ? buildCompletedRecord(selectedTag, activeDuration, startTime, loadJSON<ActiveTimerSnapshot | null>('fp-active-timer', null)?.taskId ? tasks.find(t => t.id === loadJSON<ActiveTimerSnapshot | null>('fp-active-timer', null)?.taskId) : undefined)
       : {
           id: crypto.randomUUID(),
           tagId: selectedTag.id,
@@ -329,6 +347,10 @@ export const useStore = create<Store>((set, get) => ({
           endTime: now,
           completed: true,
         };
+    const activeSnapshot = loadJSON<ActiveTimerSnapshot | null>('fp-active-timer', null);
+    const boundTask = activeSnapshot?.taskId ? tasks.find(t => t.id === activeSnapshot.taskId) : undefined;
+    if (!record.taskId && boundTask) { record.taskId = boundTask.id; record.taskTitle = boundTask.title; }
+    const nextTasks = boundTask ? tasks.map(t => t.id === boundTask.id ? { ...t, estimatedPomodoros: Math.max(0, t.estimatedPomodoros - 1), completed: t.estimatedPomodoros <= 1 ? true : t.completed, completedAt: t.estimatedPomodoros <= 1 ? now : t.completedAt, updatedAt: now } : t) : tasks;
     const h = [...history, record];
     saveJSON('fp-history', h);
     const tomato: HarvestedTomato = tomatoFromRecord(record);
@@ -336,8 +358,9 @@ export const useStore = create<Store>((set, get) => ({
     saveJSON('fp-harvested-tomatoes', tomatoes);
     const nextCycleCount = cycleCount + 1;
     saveJSON('fp-cycle-count', nextCycleCount);
+    if (boundTask) saveJSON('fp-tasks', nextTasks);
     clearActiveTimer();
-    set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount, startTime: null });
+    set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount, startTime: null, tasks: nextTasks });
 
     // Check for achievements
     const achievementId = get().checkAndUnlockAchievements();

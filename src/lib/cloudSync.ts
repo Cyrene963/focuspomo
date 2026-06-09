@@ -182,7 +182,7 @@ export function applySnapshot(data: Snapshot) {
       try { writeLocalSnapshotKey(key, value); } catch {}
     }
   }
-  const rawUpdatedAt = clean[CLIENT_UPDATED_AT_KEY];
+  const rawUpdatedAt = data[CLIENT_UPDATED_AT_KEY];
   if (typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt)) {
     writeClientUpdatedAt(rawUpdatedAt);
   }

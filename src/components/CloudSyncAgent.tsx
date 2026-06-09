@@ -33,6 +33,15 @@ async function uploadSnapshot(snapshot: Snapshot) {
   });
 }
 
+async function hasSignedInUser() {
+  try {
+    const res = await jsonFetch<{ user: unknown | null }>("/api/me");
+    return Boolean(res.user);
+  } catch {
+    return false;
+  }
+}
+
 export default function CloudSyncAgent() {
   const history = useStore(s => s.history);
   const tasks = useStore(s => s.tasks);
@@ -51,15 +60,28 @@ export default function CloudSyncAgent() {
   const tiltTomatoes = useStore(s => s.tiltTomatoes);
 
   const hydrated = useRef(false);
+  const signedInRef = useRef(false);
   const cloudSignature = useRef("");
   const lastUploadedSignature = useRef("");
   const lastCalendarSignature = useRef("");
   const [persistVersion, setPersistVersion] = useState(0);
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    jsonFetch<CloudSnapshotResponse>("/api/sync")
-      .then(async ({ snapshot }) => {
+    (async () => {
+      try {
+        const signedIn = await hasSignedInUser();
+        signedInRef.current = signedIn;
+        setSignedIn(signedIn);
+        if (!alive) return;
+        if (!signedIn) {
+          hydrated.current = true;
+          emit("ready");
+          return;
+        }
+
+        const { snapshot } = await jsonFetch<CloudSnapshotResponse>("/api/sync");
         if (!alive) return;
         const local = readSnapshot();
         const localUpdatedAt = localClientUpdatedAt();
@@ -70,7 +92,7 @@ export default function CloudSyncAgent() {
           cloudSignature.current = remoteSignature;
           if (snapshot.clientUpdatedAt > localUpdatedAt && remoteSignature !== localSignature) {
             emit("restoring");
-            applySnapshot(snapshot.data);
+            applySnapshot({ ...snapshot.data, "fp-client-updated-at": snapshot.clientUpdatedAt });
             return;
           }
           if (localUpdatedAt > snapshot.clientUpdatedAt && hasUsefulLocalSnapshot(local) && remoteSignature !== localSignature) {
@@ -94,14 +116,35 @@ export default function CloudSyncAgent() {
 
         hydrated.current = true;
         emit("ready");
-      })
-      .catch(() => {
+      } catch {
         if (!alive) return;
         hydrated.current = true;
         emit("offline");
-      });
+      }
+    })();
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    const poll = () => {
+      jsonFetch<CloudSnapshotResponse>("/api/sync")
+        .then(({ snapshot }) => {
+          if (!snapshot?.data) return;
+          const local = readSnapshot();
+          const localUpdatedAt = localClientUpdatedAt();
+          const remoteSignature = snapshotSignature(snapshot.data);
+          if (snapshot.clientUpdatedAt > localUpdatedAt && remoteSignature !== snapshotSignature(local)) {
+            emit("restoring");
+            cloudSignature.current = remoteSignature;
+            applySnapshot({ ...snapshot.data, "fp-client-updated-at": snapshot.clientUpdatedAt });
+          }
+        })
+        .catch(() => {});
+    };
+    const timer = window.setInterval(poll, 30000);
+    return () => window.clearInterval(timer);
+  }, [signedIn]);
 
   useEffect(() => {
     const onPersist = () => setPersistVersion(v => v + 1);
@@ -111,6 +154,10 @@ export default function CloudSyncAgent() {
 
   useEffect(() => {
     if (!hydrated.current) return;
+    if (!signedInRef.current) {
+      emit("ready");
+      return;
+    }
     const snapshot = readSnapshot({ touch: true });
     const signature = snapshotSignature(snapshot);
     if (!signature || signature === cloudSignature.current || signature === lastUploadedSignature.current) return;
@@ -130,6 +177,7 @@ export default function CloudSyncAgent() {
   }, [persistVersion, history, tasks, tags, selectedTag, cycleCount, harvestedTomatoes, pomodoroCycle, shortBreak, longBreak, muted, notificationsEnabled, vibration, use24HourTime, displayTomatoes, tiltTomatoes]);
 
   useEffect(() => {
+    if (!signedInRef.current) return;
     const completed = history.filter(r => r.completed && r.actualDuration >= 60);
     const signature = completeRecordSignature(history);
     if (!signature || signature === lastCalendarSignature.current) return;

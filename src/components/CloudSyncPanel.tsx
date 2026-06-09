@@ -125,7 +125,7 @@ export default function CloudSyncPanel() {
       <div style={{ padding: 18, display: "grid", gap: 12 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 850, color: "var(--text)" }}>Google 云同步</div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>登录后自动备份本机任务、番茄记录；Google Calendar 会在登录后单独授权。</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>未登录时只保存在本机浏览器；登录后自动备份任务、番茄记录、标签和设置。Google Calendar 会单独授权，只写入已完成番茄。</div>
         </div>
         <a href="/api/auth/google" className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</a>
         {state.message && <div style={{ fontSize: 12, color: "var(--text-sec)" }}>{state.message}</div>}

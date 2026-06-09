@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'focuspomo',
     script: 'node_modules/.bin/next',
-    args: 'dev -p 3457',
+    args: ['dev', '-p', '3457'],
     cwd: '/root/projects/focuspomo',
     node_args: '--max-old-space-size=512',
     env: {

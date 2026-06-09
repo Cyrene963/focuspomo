@@ -26,6 +26,9 @@
       "icons": [{ "src": "/icon-1779372627-192.png", "sizes": "192x192" }]
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    { "src": "/screenshot-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "FocusPomo timer and stats" },
+    { "src": "/screenshot-narrow.png", "sizes": "750x1334", "type": "image/png", "form_factor": "narrow", "label": "FocusPomo mobile timer" }
+  ],
   "prefer_related_applications": false
 }

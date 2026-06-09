@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 
 const PRESET_COLORS = ["#E07A45", "#55A67A", "#3ABFBF", "#B8C840", "#D4A82A", "#E06E50", "#6B9FCF", "#D4A82A"];
+const modalEase = [0.22, 1, 0.36, 1] as const;
 
 export default function TagSelector({ onClose }: { onClose: () => void }) {
   const { tags, selectedTag, selectTag, addTag } = useStore();
@@ -48,7 +49,7 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.18, ease: modalEase }}
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 100,
@@ -56,19 +57,23 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
       }}
     >
       {/* Backdrop */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "var(--bg-glass-dark)",
-        backdropFilter: "blur(25px) saturate(180%)",
-        WebkitBackdropFilter: "blur(25px) saturate(180%)",
-      }} />
+      <motion.div
+        initial={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)", WebkitBackdropFilter: "blur(0px) saturate(100%)" }}
+        animate={{ opacity: 1, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" }}
+        exit={{ opacity: 0, backdropFilter: "blur(0px) saturate(100%)", WebkitBackdropFilter: "blur(0px) saturate(100%)" }}
+        transition={{ duration: 0.24, ease: modalEase }}
+        style={{
+          position: "absolute", inset: 0,
+          background: "var(--bg-glass-dark)",
+        }}
+      />
 
       {/* Content */}
       <motion.div
-        initial={false}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 20 }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        initial={{ opacity: 0, scale: 0.94, y: 28, filter: "blur(6px)" }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.96, y: 18, filter: "blur(4px)" }}
+        transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
         onClick={e => e.stopPropagation()}
         style={{
           position: "relative",
@@ -80,6 +85,8 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
           borderRadius: 24,
           padding: 24,
           overflow: "auto",
+          boxShadow: "0 28px 80px rgba(45,38,37,0.24), inset 0 1px 0 rgba(255,255,255,0.28)",
+          transformOrigin: "50% 72%",
         }}
       >
         {/* Header */}
@@ -182,7 +189,13 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
         </AnimatePresence>
 
         {/* Tag list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <motion.div
+          initial="hidden"
+          animate="show"
+          exit="hidden"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.025, delayChildren: 0.04 } } }}
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
           {tags.map(tag => {
             const isSelected = selectedTag.id === tag.id;
             const mins = Math.floor(tag.duration / 60);
@@ -191,12 +204,13 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
               <motion.div
                 key={tag.id}
                 layout
-                initial={false}
-                animate={{ opacity: deletingId === tag.id ? 0.35 : 1 }}
+                variants={{ hidden: { opacity: 0, y: 10, scale: 0.985 }, show: { opacity: deletingId === tag.id ? 0.35 : 1, y: 0, scale: deletingId === tag.id ? 0.98 : 1 } }}
+                transition={{ type: "spring", stiffness: 520, damping: 36, mass: 0.6 }}
                 style={{ display: "flex", alignItems: "center", gap: 8 }}
               >
                 <motion.button
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.012 }}
+                  whileTap={{ scale: 0.975 }}
                   onClick={() => handleSelect(tag.id)}
                   style={{
                     flex: 1,
@@ -206,7 +220,8 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
                     background: isSelected ? tag.color : "var(--control-bg)",
                     color: isSelected ? "#FFF" : "var(--text)",
                     fontFamily: "var(--font)",
-                    transition: "background 0.2s",
+                    transition: "background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease",
+                    boxShadow: isSelected ? `0 14px 26px ${tag.color}33` : "none",
                   }}
                 >
                   <span style={{
@@ -236,7 +251,7 @@ export default function TagSelector({ onClose }: { onClose: () => void }) {
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </motion.div>
     </motion.div>
   );

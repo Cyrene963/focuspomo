@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useStore, type TaskItem } from "@/lib/store";
+import { tomatoVisualSize, tomatoWallGridStyle } from "@/lib/tomatoVisuals";
 
 function formatMinutes(totalMin: number) {
   if (totalMin < 60) return `${totalMin}分`;
@@ -30,7 +31,8 @@ export default function SummaryPage() {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
     const today = todayKey(Date.now());
-    const todayRecords = history.filter(r => todayKey(r.startTime) === today && r.completed);
+    const todayRecords = history.filter(r => todayKey(r.startTime) === today);
+    const todayCompleted = todayRecords.filter(r => r.completed);
     const completed = monthRecords.filter(r => r.completed);
     const totalMin = Math.round(completed.reduce((s, r) => s + r.actualDuration, 0) / 60);
     const todayMin = Math.round(todayRecords.reduce((s, r) => s + r.actualDuration, 0) / 60);
@@ -40,7 +42,7 @@ export default function SummaryPage() {
     const d = new Date();
     while (days.has(d.toDateString())) { streak++; d.setDate(d.getDate() - 1); }
 
-    return { totalMin, todayMin, completedCount: completed.length, todayCount: todayRecords.length, streak, monthRecords };
+    return { totalMin, todayMin, completedCount: completed.length, todayCount: todayCompleted.length, streak, monthRecords };
   }, [history]);
 
   const topTasks = useMemo(() => {
@@ -57,7 +59,11 @@ export default function SummaryPage() {
   }, [tasks]);
 
   const now = new Date();
-  const monthlyCompleted = stats.monthRecords.filter(r => r.completed);
+  const monthlyCompleted = useMemo(() => {
+    return stats.monthRecords
+      .filter(r => r.completed)
+      .sort((a, b) => a.startTime - b.startTime);
+  }, [stats.monthRecords]);
   const hasProgress = stats.todayCount > 0 || completedToday > 0;
 
   const card: React.CSSProperties = {
@@ -162,26 +168,30 @@ export default function SummaryPage() {
               查看统计 ›
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 9, justifyItems: "center" }}>
+          <div style={tomatoWallGridStyle("summary")}>
             {monthlyCompleted.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "28px 12px", color: "var(--text-sec)", fontSize: 13, lineHeight: 1.7 }}>
                 本月还没有番茄。先开始一个 10 分钟小番茄，让这张图出现第一颗。
               </div>
-            ) : monthlyCompleted.slice(-42).map(r => (
-              <div key={r.id} title={`${r.tagName} ${Math.round(r.actualDuration / 60)}分`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <img
-                  src={"/tomato-red.svg"}
-                  alt="完成的番茄"
-                  style={{
-                    width: "clamp(26px, 7vw, 40px)",
-                    height: "auto",
-                    aspectRatio: "107 / 125",
-                    filter: `drop-shadow(0 8px 18px ${(r.tagColor || "#E8644E")}33)`,
-                  }}
-                />
-                <span style={{ fontSize: 9, color: "var(--text-sec)" }}>{Math.round(r.actualDuration / 60)}分</span>
-              </div>
-            ))}
+            ) : monthlyCompleted.slice(-42).map(r => {
+              const minutes = Math.round(r.actualDuration / 60);
+              const size = tomatoVisualSize(r.actualDuration, "summary");
+              return (
+                <div key={r.id} title={`${r.tagName} ${minutes}分`} style={{ height: 68, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+                  <img
+                    src={"/tomato-red.svg"}
+                    alt="完成的番茄"
+                    style={{
+                      width: size,
+                      height: "auto",
+                      aspectRatio: "107 / 125",
+                      filter: `drop-shadow(0 8px 18px ${(r.tagColor || "#E8644E")}33)`,
+                    }}
+                  />
+                  <span style={{ fontSize: 9, color: "var(--text-sec)", lineHeight: 1 }}>{minutes}分</span>
+                </div>
+              );
+            })}
           </div>
         </section>
 
