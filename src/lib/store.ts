@@ -198,7 +198,21 @@ function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
 
 const MIN_INTERRUPTED_RECORD_SECONDS = 1;
 
-function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activeDuration: number) {
+type RestoredTimer =
+  | {
+      kind: 'running';
+      snapshot: ActiveTimerSnapshot;
+      tag: Tag;
+      remaining: number;
+    }
+  | {
+      kind: 'completed';
+      session: 'focus';
+      tag: Tag;
+      activeDuration: number;
+    };
+
+function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activeDuration: number): RestoredTimer {
   const history = loadJSON<PomodoroRecord[]>('fp-history', []);
   const endTime = snapshot.startTime + activeDuration * 1000;
   const alreadyRecorded = history.some(record => record.completed && Math.abs(record.endTime - endTime) < 1000);
@@ -213,9 +227,10 @@ function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activ
     saveJSON('fp-cycle-count', loadJSON('fp-cycle-count', 0) + 1);
   }
   clearActiveTimer();
+  return { kind: 'completed', session: 'focus', tag, activeDuration };
 }
 
-function restoredTimer(tags: Tag[], fallbackTag: Tag) {
+function restoredTimer(tags: Tag[], fallbackTag: Tag): RestoredTimer | null {
   const snapshot = loadJSON<ActiveTimerSnapshot | null>('fp-active-timer', null);
   if (!snapshot || snapshot.state !== 'running' || !Number.isFinite(snapshot.startTime) || !Number.isFinite(snapshot.activeDuration)) return null;
   const activeDuration = Math.max(60, Math.min(12 * 60 * 60, Math.round(snapshot.activeDuration)));
@@ -223,11 +238,12 @@ function restoredTimer(tags: Tag[], fallbackTag: Tag) {
   const tag = tags.find(t => t.id === snapshot.tagId) || fallbackTag;
   const remaining = Math.max(activeDuration - elapsed, 0);
   if (remaining <= 0) {
-    if (snapshot.session === 'focus') restoreExpiredFocusTimer(snapshot, tag, activeDuration);
-    else clearActiveTimer();
+    if (snapshot.session === 'focus') return restoreExpiredFocusTimer(snapshot, tag, activeDuration);
+    clearActiveTimer();
     return null;
   }
   return {
+    kind: 'running',
     snapshot: { ...snapshot, activeDuration, tagId: tag.id },
     tag,
     remaining,
@@ -255,12 +271,12 @@ export const useStore = create<Store>((set, get) => ({
   enterFocusMode: () => set({ page: 'timer', focusMode: true }),
   exitFocusMode: () => set({ focusMode: false }),
 
-  state: initRestoredTimer && initRestoredTimer.remaining > 0 ? 'running' : 'idle',
+  state: initRestoredTimer?.kind === 'running' ? 'running' : initRestoredTimer?.kind === 'completed' ? 'completed' : 'idle',
   selectedTag: initRestoredTimer?.tag || initTag,
-  session: initRestoredTimer?.snapshot.session || 'focus',
-  activeDuration: initRestoredTimer?.snapshot.activeDuration || initTag.duration,
-  remaining: initRestoredTimer?.remaining || initTag.duration,
-  startTime: initRestoredTimer && initRestoredTimer.remaining > 0 ? initRestoredTimer.snapshot.startTime : null,
+  session: initRestoredTimer?.kind === 'running' ? initRestoredTimer.snapshot.session : initRestoredTimer?.kind === 'completed' ? initRestoredTimer.session : 'focus',
+  activeDuration: initRestoredTimer?.kind === 'running' ? initRestoredTimer.snapshot.activeDuration : initRestoredTimer?.kind === 'completed' ? initRestoredTimer.activeDuration : initTag.duration,
+  remaining: initRestoredTimer?.kind === 'running' ? initRestoredTimer.remaining : initRestoredTimer?.kind === 'completed' ? 0 : initTag.duration,
+  startTime: initRestoredTimer?.kind === 'running' ? initRestoredTimer.snapshot.startTime : null,
   muted: loadJSON('fp-muted', false),
   notificationsEnabled: loadJSON('fp-notifications-enabled', false),
 
