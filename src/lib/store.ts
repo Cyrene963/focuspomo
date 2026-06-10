@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { writeLocalSnapshotKey, type SNAPSHOT_KEYS } from "@/lib/cloudSync";
+import { writeClientUpdatedAt, writeLocalSnapshotKey, type SNAPSHOT_KEYS } from "@/lib/cloudSync";
 import type { AchievementId } from "@/lib/achievements";
 
 export type TimerState = 'idle' | 'running' | 'completed';
@@ -196,6 +196,23 @@ function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
   };
 }
 
+function mergeHarvestedTomatoes(history: PomodoroRecord[], harvested: HarvestedTomato[]): HarvestedTomato[] {
+  const byId = new Map<string, HarvestedTomato>();
+  for (const tomato of harvested) byId.set(tomato.id, tomato);
+  for (const record of history) {
+    if (record.completed || record.actualDuration >= MIN_INTERRUPTED_RECORD_SECONDS) {
+      byId.set(record.id, tomatoFromRecord(record));
+    }
+  }
+  return Array.from(byId.values())
+    .sort((a, b) => a.collectedAt - b.collectedAt)
+    .slice(-50);
+}
+
+function sameHarvestedTomatoes(a: HarvestedTomato[], b: HarvestedTomato[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 const MIN_INTERRUPTED_RECORD_SECONDS = 1;
 
 type RestoredTimer =
@@ -222,7 +239,7 @@ function restoreExpiredFocusTimer(snapshot: ActiveTimerSnapshot, tag: Tag, activ
     const record = buildCompletedRecord(tag, activeDuration, snapshot.startTime, task);
     const nextHistory = [...history, record];
     saveJSON('fp-history', nextHistory);
-    const tomatoes = [...loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []), tomatoFromRecord(record)].slice(-50);
+    const tomatoes = mergeHarvestedTomatoes(nextHistory, loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []));
     saveJSON('fp-harvested-tomatoes', tomatoes);
     saveJSON('fp-cycle-count', loadJSON('fp-cycle-count', 0) + 1);
   }
@@ -263,6 +280,13 @@ const savedTags = loadJSON<Tag[]>('fp-tags', DEFAULT_TAGS);
 const savedTag = loadJSON<{ id: string }>('fp-selected-tag', { id: 'focus' });
 const initTag = savedTags.find(t => t.id === savedTag.id) || savedTags[0];
 const initRestoredTimer = restoredTimer(savedTags, initTag);
+const savedHistory = loadJSON<PomodoroRecord[]>('fp-history', []);
+const storedHarvestedTomatoes = loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []);
+const savedHarvestedTomatoes = mergeHarvestedTomatoes(savedHistory, storedHarvestedTomatoes);
+if (!sameHarvestedTomatoes(savedHarvestedTomatoes, storedHarvestedTomatoes)) {
+  saveJSON('fp-harvested-tomatoes', savedHarvestedTomatoes);
+  writeClientUpdatedAt(Date.now());
+}
 
 export const useStore = create<Store>((set, get) => ({
   page: 'timer',
@@ -369,8 +393,7 @@ export const useStore = create<Store>((set, get) => ({
     const nextTasks = boundTask ? tasks.map(t => t.id === boundTask.id ? { ...t, estimatedPomodoros: Math.max(0, t.estimatedPomodoros - 1), completed: t.estimatedPomodoros <= 1 ? true : t.completed, completedAt: t.estimatedPomodoros <= 1 ? now : t.completedAt, updatedAt: now } : t) : tasks;
     const h = [...history, record];
     saveJSON('fp-history', h);
-    const tomato: HarvestedTomato = tomatoFromRecord(record);
-    const tomatoes = [...get().harvestedTomatoes, tomato].slice(-50);
+    const tomatoes = mergeHarvestedTomatoes(h, get().harvestedTomatoes);
     saveJSON('fp-harvested-tomatoes', tomatoes);
     const nextCycleCount = cycleCount + 1;
     saveJSON('fp-cycle-count', nextCycleCount);
@@ -397,7 +420,7 @@ export const useStore = create<Store>((set, get) => ({
       const record = buildInterruptedRecord(selectedTag, activeDuration, startTime, now);
       const h = [...history, record];
       saveJSON('fp-history', h);
-      const tomatoes = [...get().harvestedTomatoes, tomatoFromRecord(record)].slice(-50);
+      const tomatoes = mergeHarvestedTomatoes(h, get().harvestedTomatoes);
       saveJSON('fp-harvested-tomatoes', tomatoes);
       clearActiveTimer();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false, history: h, harvestedTomatoes: tomatoes });
@@ -428,9 +451,9 @@ export const useStore = create<Store>((set, get) => ({
     set({ notificationsEnabled: v });
   },
 
-  history: loadJSON<PomodoroRecord[]>('fp-history', []),
+  history: savedHistory,
   cycleCount: loadJSON('fp-cycle-count', 0),
-  harvestedTomatoes: loadJSON<HarvestedTomato[]>('fp-harvested-tomatoes', []),
+  harvestedTomatoes: savedHarvestedTomatoes,
   addManualRecord: ({ tagId, startTime, durationSeconds }) => {
     const tag = get().tags.find(t => t.id === tagId) || get().selectedTag;
     const plannedDuration = Math.max(60, Math.min(12 * 60 * 60, Math.round(durationSeconds)));
@@ -448,8 +471,7 @@ export const useStore = create<Store>((set, get) => ({
     };
     const h = [...get().history, record];
     saveJSON('fp-history', h);
-    const tomato: HarvestedTomato = tomatoFromRecord(record);
-    const tomatoes = [...get().harvestedTomatoes, tomato].slice(-50);
+    const tomatoes = mergeHarvestedTomatoes(h, get().harvestedTomatoes);
     saveJSON('fp-harvested-tomatoes', tomatoes);
     set({ history: h, harvestedTomatoes: tomatoes });
   },
