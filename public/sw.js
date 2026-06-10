@@ -10,14 +10,14 @@ const PRECACHE_NEXT_STATIC = [
   "/_next/static/chunks/03cnjj9mnzy_p.js",
   "/_next/static/chunks/03~yq9q893hmn.js",
   "/_next/static/chunks/0ht900cau6_ur.js",
-  "/_next/static/chunks/0hzyrwpi1kh.l.css",
   "/_next/static/chunks/0l0v.u5dvusae.js",
+  "/_next/static/chunks/0pzz4fyhn8q0l.js",
   "/_next/static/chunks/0wb6jdvd3md34.js",
-  "/_next/static/chunks/0x2fm~poyyedq.js",
+  "/_next/static/chunks/0y6s8jrmhq3em.css",
   "/_next/static/chunks/turbopack-17vrofky5om_c.js",
-  "/_next/static/igpQTpeOmCG3oJIemUWWI/_buildManifest.js",
-  "/_next/static/igpQTpeOmCG3oJIemUWWI/_clientMiddlewareManifest.js",
-  "/_next/static/igpQTpeOmCG3oJIemUWWI/_ssgManifest.js"
+  "/_next/static/eF9q48PjIvndCQSiYcdbQ/_buildManifest.js",
+  "/_next/static/eF9q48PjIvndCQSiYcdbQ/_clientMiddlewareManifest.js",
+  "/_next/static/eF9q48PjIvndCQSiYcdbQ/_ssgManifest.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 

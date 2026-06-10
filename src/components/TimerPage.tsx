@@ -201,49 +201,6 @@ export default function TimerPage() {
         )}
       </AnimatePresence>
 
-      {/* Visible stop control: hold/swipe remains playful, but stopping must be discoverable. */}
-      <AnimatePresence>
-        {isActive && (
-          <motion.button
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
-              setHoldActive(false);
-              setIsStopping(true);
-              window.setTimeout(() => {
-                interrupt();
-                setIsStopping(false);
-              }, 120);
-            }}
-            className="pressable"
-            aria-label={`结束当前${sessionLabel}`}
-            style={{
-              position: "absolute",
-              left: "50%",
-              bottom: "max(152px, calc(env(safe-area-inset-bottom) + 128px))",
-              transform: "translateX(-50%)",
-              zIndex: 32,
-              minWidth: 136,
-              minHeight: 46,
-              borderRadius: 999,
-              background: "rgba(45,38,37,0.12)",
-              color: "var(--text)",
-              border: "1px solid rgba(45,38,37,0.08)",
-              backdropFilter: "blur(18px) saturate(160%)",
-              WebkitBackdropFilter: "blur(18px) saturate(160%)",
-              fontSize: 14,
-              fontWeight: 850,
-              boxShadow: "0 12px 28px rgba(45,38,37,0.10)",
-            }}
-          >
-            结束本轮
-          </motion.button>
-        )}
-      </AnimatePresence>
-
       {/* ===== CONTENT LAYER (z-index 1) ===== */}
       <div style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", overflow: "hidden" }}>
         <AnimatePresence mode="wait" initial={false}>
