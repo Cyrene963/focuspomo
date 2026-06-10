@@ -45,6 +45,25 @@ export function writeClientUpdatedAt(updatedAt: number) {
 
 export type Snapshot = Record<string, unknown>;
 
+type PomodoroRecordLike = {
+  id: string;
+  tagId: string;
+  tagName: string;
+  tagColor: string;
+  plannedDuration: number;
+  actualDuration: number;
+  startTime: number;
+  endTime: number;
+  completed: boolean;
+};
+
+type HarvestedTomatoLike = {
+  id: string;
+  completed: boolean;
+  durationSeconds: number;
+  collectedAt: number;
+};
+
 function finiteNumber(value: unknown, min: number, max: number) {
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 }
@@ -173,19 +192,65 @@ export function hasUsefulLocalSnapshot(data: Snapshot) {
   return SNAPSHOT_KEYS.some(key => Object.prototype.hasOwnProperty.call(data, key));
 }
 
+function mergeById<T extends { id: string }>(a: T[], b: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const item of a) byId.set(item.id, item);
+  for (const item of b) byId.set(item.id, item);
+  return Array.from(byId.values());
+}
+
+function tomatoFromRecord(record: PomodoroRecordLike): HarvestedTomatoLike {
+  return {
+    id: record.id,
+    completed: record.completed,
+    durationSeconds: record.actualDuration,
+    collectedAt: record.endTime,
+  };
+}
+
+function mergeHarvestedFromHistory(history: PomodoroRecordLike[], harvested: HarvestedTomatoLike[]) {
+  const byId = new Map<string, HarvestedTomatoLike>();
+  for (const tomato of harvested) byId.set(tomato.id, tomato);
+  for (const record of history) {
+    if (record.completed || record.actualDuration >= 1) byId.set(record.id, tomatoFromRecord(record));
+  }
+  return Array.from(byId.values()).sort((a, b) => a.collectedAt - b.collectedAt).slice(-50);
+}
+
+export function mergeSnapshots(localData: Snapshot, incomingData: Snapshot): Snapshot {
+  const local = sanitizeSnapshot(localData);
+  const incoming = sanitizeSnapshot(incomingData);
+  const merged: Snapshot = { ...local, ...incoming };
+
+  const localHistory = Array.isArray(local["fp-history"]) ? local["fp-history"] as PomodoroRecordLike[] : [];
+  const incomingHistory = Array.isArray(incoming["fp-history"]) ? incoming["fp-history"] as PomodoroRecordLike[] : [];
+  const history = mergeById(localHistory, incomingHistory).sort((a, b) => a.endTime - b.endTime).slice(-5000);
+  if (history.length) merged["fp-history"] = history;
+
+  const localHarvested = Array.isArray(local["fp-harvested-tomatoes"]) ? local["fp-harvested-tomatoes"] as HarvestedTomatoLike[] : [];
+  const incomingHarvested = Array.isArray(incoming["fp-harvested-tomatoes"]) ? incoming["fp-harvested-tomatoes"] as HarvestedTomatoLike[] : [];
+  const harvested = mergeHarvestedFromHistory(history, mergeById(localHarvested, incomingHarvested));
+  if (harvested.length) merged["fp-harvested-tomatoes"] = harvested;
+
+  const localCycle = typeof local["fp-cycle-count"] === "number" ? local["fp-cycle-count"] as number : 0;
+  const incomingCycle = typeof incoming["fp-cycle-count"] === "number" ? incoming["fp-cycle-count"] as number : 0;
+  if (localCycle || incomingCycle) merged["fp-cycle-count"] = Math.max(localCycle, incomingCycle, history.filter(r => r.completed).length);
+
+  return sanitizeSnapshot(merged);
+}
+
 export function applySnapshot(data: Snapshot) {
   if (typeof window === "undefined") return;
   const clean = sanitizeSnapshot(data);
   if (!hasUsefulLocalSnapshot(clean)) throw new Error("Cloud snapshot has no valid FocusPomo data");
-  for (const [key, value] of Object.entries(clean)) {
+  const merged = mergeSnapshots(readSnapshot(), clean);
+  for (const [key, value] of Object.entries(merged)) {
     if (isSnapshotKey(key)) {
       try { writeLocalSnapshotKey(key, value); } catch {}
     }
   }
   const rawUpdatedAt = data[CLIENT_UPDATED_AT_KEY];
-  if (typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt)) {
-    writeClientUpdatedAt(rawUpdatedAt);
-  }
+  writeClientUpdatedAt(typeof rawUpdatedAt === "number" && Number.isFinite(rawUpdatedAt) ? rawUpdatedAt : Date.now());
   window.location.reload();
 }
 
