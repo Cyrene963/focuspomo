@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Matter from "matter-js";
-import { useStore, type HarvestedTomato } from "@/lib/store";
+import { useStore, mergeHarvestedTomatoes, type HarvestedTomato } from "@/lib/store";
 import { gravityFromDeviceMotion, gravityFromDeviceOrientation, resolveScreenAngle } from "@/lib/motionGravity";
 import { tomatoVisualSize } from "@/lib/tomatoVisuals";
 
@@ -52,7 +52,12 @@ export default function TomatoPhysics() {
   const [tiltDbg, setTiltDbg] = useState<null | { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }>(null);
   const tiltDebugRef = useRef(false);
   const lastDbgRef = useRef(0);
-  const tomatoes = useStore(s => s.harvestedTomatoes);
+  const harvestedTomatoes = useStore(s => s.harvestedTomatoes);
+  const history = useStore(s => s.history);
+  const tomatoes = useMemo(
+    () => mergeHarvestedTomatoes(history, harvestedTomatoes),
+    [history, harvestedTomatoes]
+  );
   const displayTomatoes = useStore(s => s.displayTomatoes);
   const tiltTomatoes = useStore(s => s.tiltTomatoes);
   const setTiltTomatoes = useStore(s => s.setTiltTomatoes);

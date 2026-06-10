@@ -187,7 +187,9 @@ function buildInterruptedRecord(tag: Tag, activeDuration: number, startTime: num
   };
 }
 
-function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
+export const MIN_INTERRUPTED_RECORD_SECONDS = 1;
+
+export function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
   return {
     id: record.id,
     completed: record.completed,
@@ -196,7 +198,7 @@ function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
   };
 }
 
-function mergeHarvestedTomatoes(history: PomodoroRecord[], harvested: HarvestedTomato[]): HarvestedTomato[] {
+export function mergeHarvestedTomatoes(history: PomodoroRecord[], harvested: HarvestedTomato[]): HarvestedTomato[] {
   const byId = new Map<string, HarvestedTomato>();
   for (const tomato of harvested) byId.set(tomato.id, tomato);
   for (const record of history) {
@@ -212,8 +214,6 @@ function mergeHarvestedTomatoes(history: PomodoroRecord[], harvested: HarvestedT
 function sameHarvestedTomatoes(a: HarvestedTomato[], b: HarvestedTomato[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
-
-const MIN_INTERRUPTED_RECORD_SECONDS = 1;
 
 type RestoredTimer =
   | {

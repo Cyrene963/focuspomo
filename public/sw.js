@@ -6,14 +6,12 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
-  "/_next/static/7iPEjPVvFairo-YAwMqov/_buildManifest.js",
-  "/_next/static/7iPEjPVvFairo-YAwMqov/_ssgManifest.js",
   "/_next/static/chunks/201-e77d613e94d7c36d.js",
   "/_next/static/chunks/4b5b508e-5f5d17962b9f626e.js",
   "/_next/static/chunks/4bd1b696-215e5051988c3dde.js",
   "/_next/static/chunks/794-5fb6eff04a716ab6.js",
   "/_next/static/chunks/app/_global-error/page-3fe98b7f233343d9.js",
-  "/_next/static/chunks/app/_not-found/page-523e3a0f6e6b3bfd.js",
+  "/_next/static/chunks/app/_not-found/page-f45cdb695c06f295.js",
   "/_next/static/chunks/app/api/agent/key/route-3fe98b7f233343d9.js",
   "/_next/static/chunks/app/api/agent/tasks/route-3fe98b7f233343d9.js",
   "/_next/static/chunks/app/api/auth/callback/google/route-3fe98b7f233343d9.js",
@@ -24,19 +22,21 @@ const PRECACHE_NEXT_STATIC = [
   "/_next/static/chunks/app/api/calendar/sync/route-3fe98b7f233343d9.js",
   "/_next/static/chunks/app/api/me/route-3fe98b7f233343d9.js",
   "/_next/static/chunks/app/api/sync/route-3fe98b7f233343d9.js",
-  "/_next/static/chunks/app/layout-99a452415193d94d.js",
-  "/_next/static/chunks/app/page-5b310ef2a8a6f742.js",
+  "/_next/static/chunks/app/layout-4bb2740d3c484642.js",
+  "/_next/static/chunks/app/page-883496cbb47b8c9c.js",
   "/_next/static/chunks/framework-93cda6578f6c76ec.js",
-  "/_next/static/chunks/main-app-83e8951bc4008115.js",
+  "/_next/static/chunks/main-app-57ee258300a0a2c7.js",
   "/_next/static/chunks/main-d792e4133be0f50b.js",
   "/_next/static/chunks/next/dist/client/components/builtin/app-error-3fe98b7f233343d9.js",
   "/_next/static/chunks/next/dist/client/components/builtin/forbidden-3fe98b7f233343d9.js",
-  "/_next/static/chunks/next/dist/client/components/builtin/global-error-cd6fa91b3d188aed.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/global-error-456aa5dbd5a40231.js",
   "/_next/static/chunks/next/dist/client/components/builtin/not-found-3fe98b7f233343d9.js",
   "/_next/static/chunks/next/dist/client/components/builtin/unauthorized-3fe98b7f233343d9.js",
   "/_next/static/chunks/polyfills-42372ed130431b0a.js",
   "/_next/static/chunks/webpack-589ea4b0a5f0dd2f.js",
-  "/_next/static/css/925f0844dc69e749.css"
+  "/_next/static/css/925f0844dc69e749.css",
+  "/_next/static/ni41qQJY-zrYkCyVz1_xw/_buildManifest.js",
+  "/_next/static/ni41qQJY-zrYkCyVz1_xw/_ssgManifest.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 
