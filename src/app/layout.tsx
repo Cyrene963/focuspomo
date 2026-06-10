@@ -46,7 +46,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready).then(reg=>{if(reg.active){reg.active.postMessage({type:'CACHE_APP_SHELL'})}}).catch(()=>{})})}` }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{Promise.allSettled([navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(r=>r.unregister()))), 'caches' in window ? caches.keys().then(keys=>Promise.all(keys.filter(k=>k.indexOf('focuspomo-')===0).map(k=>caches.delete(k)))) : Promise.resolve()]).catch(()=>{})})}`,
+          }}
+        />
       </body>
     </html>
   );
