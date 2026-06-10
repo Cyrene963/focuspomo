@@ -60,6 +60,24 @@ Security model:
 
 - Users generate their own Agent Key from Settings → AI Agent.
 - The key is shown once and is stored server-side only as a SHA-256 hash.
-- Requests use `Authorization: Bearer YOUR_FOCUSPOMO_AGENT_KEY` against `/api/agent/tasks`.
+- Requests use an `Authorization` bearer header against `/api/agent/tasks`; use your generated Agent Key as the bearer value.
+- For Claude Desktop/Cursor-style MCP clients, use the stdio bridge at `scripts/focuspomo-mcp.mjs`:
+
+```json
+{
+  "mcpServers": {
+    "focuspomo": {
+      "command": "node",
+      "args": ["/path/to/focuspomo/scripts/focuspomo-mcp.mjs"],
+      "env": {
+        "FOCUSPOMO_ENDPOINT": "https://focuspomo.bz9.me/api/agent/tasks",
+        "FOCUSPOMO_AGENT_KEY": "YOUR_F...KEY"
+      }
+    }
+  }
+}
+```
+
+- The public API accepts bearer-token requests when clients send a normal `User-Agent`; some default Python clients may be blocked by Cloudflare with `403 error code: 1010`. The MCP bridge sends a stable User-Agent.
 - A user key resolves only that user's data; unauthenticated users do not see the Agent connection UI.
 - Do not commit real Agent Keys, Google tokens, cookies, or `.env.local` values to GitHub.
