@@ -187,7 +187,9 @@ function buildInterruptedRecord(tag: Tag, activeDuration: number, startTime: num
   };
 }
 
-export const MIN_INTERRUPTED_RECORD_SECONDS = 1;
+// 中断的专注只有持续 ≥5 分钟才值得记录:
+// 不足 5 分钟的放弃不算中断次数、不产生黄色番茄、不进历史。
+export const MIN_INTERRUPTED_RECORD_SECONDS = 5 * 60;
 
 export function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
   return {
@@ -200,7 +202,12 @@ export function tomatoFromRecord(record: PomodoroRecord): HarvestedTomato {
 
 export function mergeHarvestedTomatoes(history: PomodoroRecord[], harvested: HarvestedTomato[]): HarvestedTomato[] {
   const byId = new Map<string, HarvestedTomato>();
-  for (const tomato of harvested) byId.set(tomato.id, tomato);
+  for (const tomato of harvested) {
+    // 旧数据里可能存有 <5 分钟的中断黄番茄,按现行规则一并过滤
+    if (tomato.completed || tomato.durationSeconds >= MIN_INTERRUPTED_RECORD_SECONDS) {
+      byId.set(tomato.id, tomato);
+    }
+  }
   for (const record of history) {
     if (record.completed || record.actualDuration >= MIN_INTERRUPTED_RECORD_SECONDS) {
       byId.set(record.id, tomatoFromRecord(record));

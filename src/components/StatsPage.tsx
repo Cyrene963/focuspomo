@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, MIN_INTERRUPTED_RECORD_SECONDS } from "@/lib/store";
 import { tomatoVisualSize, tomatoWallGridStyle } from "@/lib/tomatoVisuals";
 
 const PERIODS = ["week", "month", "year"] as const;
@@ -74,7 +74,8 @@ export default function StatsPage() {
 
   const totalMin = Math.round(filtered.reduce((s, r) => s + r.actualDuration, 0) / 60);
   const completed = filtered.filter(r => r.completed).length;
-  const abandoned = filtered.filter(r => !r.completed).length;
+  // 与 store 的记录规则一致:只有 ≥5 分钟的中断才算中断(兼容历史上的短记录)
+  const abandoned = filtered.filter(r => !r.completed && r.actualDuration >= MIN_INTERRUPTED_RECORD_SECONDS).length;
 
   const barBuckets = useMemo(() => bucketRecords(filtered, period), [filtered, period]);
   const maxBar = Math.max(...barBuckets.map(b => b.mins), 60);
