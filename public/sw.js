@@ -1,4 +1,4 @@
-const CACHE_NAME = 'focuspomo-v1779372627-pwa8';
+const CACHE_NAME = 'focuspomo-RdnucSP0nSfd4fSwteNb1';
 const APP_SHELL_URL = '/';
 
 // Build-time injected from `.next/static` by scripts/inject-sw-precache.js.
@@ -6,6 +6,9 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
+  "/_next/static/RdnucSP0nSfd4fSwteNb1/_buildManifest.js",
+  "/_next/static/RdnucSP0nSfd4fSwteNb1/_clientMiddlewareManifest.js",
+  "/_next/static/RdnucSP0nSfd4fSwteNb1/_ssgManifest.js",
   "/_next/static/chunks/0.16jrjsj-cn3.js",
   "/_next/static/chunks/03cnjj9mnzy_p.js",
   "/_next/static/chunks/03~yq9q893hmn.js",
@@ -14,10 +17,7 @@ const PRECACHE_NEXT_STATIC = [
   "/_next/static/chunks/0l0v.u5dvusae.js",
   "/_next/static/chunks/0wb6jdvd3md34.js",
   "/_next/static/chunks/0y6s8jrmhq3em.css",
-  "/_next/static/chunks/turbopack-17vrofky5om_c.js",
-  "/_next/static/jzkPmERscB32oWgbfXJm8/_buildManifest.js",
-  "/_next/static/jzkPmERscB32oWgbfXJm8/_clientMiddlewareManifest.js",
-  "/_next/static/jzkPmERscB32oWgbfXJm8/_ssgManifest.js"
+  "/_next/static/chunks/turbopack-17vrofky5om_c.js"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 

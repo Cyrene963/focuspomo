@@ -48,7 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ThemeProvider>
         <script
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{Promise.allSettled([navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(r=>r.unregister()))), 'caches' in window ? caches.keys().then(keys=>Promise.all(keys.filter(k=>k.indexOf('focuspomo-')===0).map(k=>caches.delete(k)))) : Promise.resolve()]).catch(()=>{})})}`,
+            // 注册离线 Service Worker。此前这里是一段调试遗留的"杀掉 PWA"脚本
+            // (每次加载注销全部 SW 并删光 focuspomo-* 缓存),导致离线打开必白屏。
+            // 注册成功后再让 SW 刷新一次 app shell 缓存,保证断网也能启动。
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(reg=>{const tellSW=()=>{(reg.active||navigator.serviceWorker.controller)?.postMessage({type:'CACHE_APP_SHELL'})};if(reg.active){tellSW()}else{navigator.serviceWorker.addEventListener('controllerchange',tellSW,{once:true})}}).catch(()=>{})})}`,
           }}
         />
       </body>

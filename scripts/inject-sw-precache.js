@@ -32,5 +32,14 @@ if (!re.test(sw)) {
   throw new Error('precache marker not found in public/sw.js');
 }
 sw = sw.replace(re, block);
+
+// 缓存名跟随构建 ID:每次部署后旧缓存在 activate 阶段被整体清掉,
+// 避免固定缓存名长期堆积旧 chunk。
+const buildIdPath = path.join(root, '.next', 'BUILD_ID');
+if (fs.existsSync(buildIdPath)) {
+  const buildId = fs.readFileSync(buildIdPath, 'utf8').trim();
+  sw = sw.replace(/const CACHE_NAME = '[^']+';/, `const CACHE_NAME = 'focuspomo-${buildId}';`);
+}
+
 fs.writeFileSync(swPath, sw);
 console.log(`Injected ${assets.length} Next static assets into public/sw.js`);
