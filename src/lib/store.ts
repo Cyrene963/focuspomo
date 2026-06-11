@@ -474,6 +474,10 @@ export const useStore = create<Store>((set, get) => ({
     const tomatoes = mergeHarvestedTomatoes(h, get().harvestedTomatoes);
     saveJSON('fp-harvested-tomatoes', tomatoes);
     set({ history: h, harvestedTomatoes: tomatoes });
+
+    // 补录同样计入成就(里程碑用 >= 判断,跨过阈值也能解锁)
+    const achievementId = get().checkAndUnlockAchievements();
+    if (achievementId) set({ celebratingAchievement: achievementId });
   },
 
   tasks: loadJSON<TaskItem[]>('fp-tasks', []),
@@ -595,35 +599,45 @@ export const useStore = create<Store>((set, get) => ({
   setCelebratingAchievement: (id) => set({ celebratingAchievement: id }),
   checkAndUnlockAchievements: () => {
     const state = get();
-    const completedCount = state.history.filter(r => r.completed).length;
+    const completedRecords = state.history.filter(r => r.completed);
+    const completedCount = completedRecords.length;
+
+    // 连续天数(从今天往回数)
+    const days = new Set(completedRecords.map(r => new Date(r.startTime).toDateString()));
+    let streak = 0;
+    for (const d = new Date(); days.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
+
+    // 单日最高完成数
+    const byDay = new Map<string, number>();
+    for (const r of completedRecords) {
+      const key = new Date(r.startTime).toDateString();
+      byDay.set(key, (byDay.get(key) || 0) + 1);
+    }
+    let maxPerDay = 0;
+    for (const n of byDay.values()) maxPerDay = Math.max(maxPerDay, n);
+
+    const hasEarlyBird = completedRecords.some(r => new Date(r.endTime).getHours() < 6);
+
+    // 全部成就用 >= 判断:补录、批量同步等一次跨过阈值也能解锁
+    const qualified: AchievementId[] = [];
+    if (completedCount >= 1) qualified.push('first-pomodoro');
+    if (completedCount >= 10) qualified.push('milestone-10');
+    if (completedCount >= 50) qualified.push('milestone-50');
+    if (completedCount >= 100) qualified.push('milestone-100');
+    if (completedCount >= 500) qualified.push('milestone-500');
+    if (streak >= 7) qualified.push('streak-7');
+    if (streak >= 30) qualified.push('streak-30');
+    if (maxPerDay >= 8) qualified.push('daily-star');
+    if (hasEarlyBird) qualified.push('early-bird');
+
     const unlocked = state.unlockedAchievements;
+    const fresh = qualified.filter(id => !unlocked.has(id));
+    if (fresh.length === 0) return null;
 
-    // Check milestone achievements
-    if (completedCount === 1 && !unlocked.has('first-pomodoro')) {
-      const newUnlocked = new Set(unlocked).add('first-pomodoro');
-      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
-      set({ unlockedAchievements: newUnlocked });
-      return 'first-pomodoro';
-    }
-    if (completedCount === 10 && !unlocked.has('milestone-10')) {
-      const newUnlocked = new Set(unlocked).add('milestone-10');
-      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
-      set({ unlockedAchievements: newUnlocked });
-      return 'milestone-10';
-    }
-    if (completedCount === 50 && !unlocked.has('milestone-50')) {
-      const newUnlocked = new Set(unlocked).add('milestone-50');
-      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
-      set({ unlockedAchievements: newUnlocked });
-      return 'milestone-50';
-    }
-    if (completedCount === 100 && !unlocked.has('milestone-100')) {
-      const newUnlocked = new Set(unlocked).add('milestone-100');
-      saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
-      set({ unlockedAchievements: newUnlocked });
-      return 'milestone-100';
-    }
-
-    return null;
+    const newUnlocked = new Set(unlocked);
+    for (const id of fresh) newUnlocked.add(id);
+    saveJSON('fp-unlocked-achievements', Array.from(newUnlocked));
+    set({ unlockedAchievements: newUnlocked });
+    return fresh[0];
   },
 }));

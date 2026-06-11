@@ -77,7 +77,14 @@ export default function TimerPage() {
   const todayPomodoros = history.filter(r => r.completed && new Date(r.startTime).toDateString() === todayKey).length;
   let currentStreak = 0;
   for (const d = new Date(); completedDays.has(d.toDateString()); d.setDate(d.getDate() - 1)) currentStreak++;
-  const nextAchievement = history.filter(r => r.completed).length < 10 ? "10 番茄里程碑" : history.filter(r => r.completed).length < 50 ? "50 番茄里程碑" : "100 番茄里程碑";
+  const completedTotal = history.filter(r => r.completed).length;
+  const nextAchievement =
+    completedTotal < 10 ? "10 番茄里程碑" :
+    completedTotal < 50 ? "50 番茄里程碑" :
+    completedTotal < 100 ? "100 番茄里程碑" :
+    completedTotal < 500 ? "500 番茄里程碑" :
+    currentStreak < 7 ? "连续 7 天" :
+    currentStreak < 30 ? "连续 30 天" : "保持连续 🔥";
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
 
