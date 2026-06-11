@@ -29,7 +29,7 @@ export interface AchievementProgress {
 export const ACHIEVEMENTS: Record<AchievementId, Achievement> = {
   'first-pomodoro': {
     id: 'first-pomodoro',
-    name: '首月坚持',
+    name: '第一个番茄',
     description: '完成第一个25分钟番茄',
     icon: '🌱',
     color: '#55A67A',

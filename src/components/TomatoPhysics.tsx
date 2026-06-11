@@ -6,7 +6,7 @@ import { useStore, mergeHarvestedTomatoes, type HarvestedTomato } from "@/lib/st
 import { gravityFromDeviceMotion, gravityFromDeviceOrientation, resolveScreenAngle } from "@/lib/motionGravity";
 import { tomatoVisualSize } from "@/lib/tomatoVisuals";
 
-const { Engine, Bodies, Composite, Body } = Matter;
+const { Engine, Bodies, Composite, Body, Query } = Matter;
 
 type MotionStatus = "unknown" | "unsupported" | "needs-permission" | "active" | "denied";
 
@@ -54,6 +54,20 @@ export default function TomatoPhysics() {
   const lastDbgRef = useRef(0);
   const harvestedTomatoes = useStore(s => s.harvestedTomatoes);
   const history = useStore(s => s.history);
+  // 抓取/拨弄/抛掷番茄。在 window 捕获阶段做命中检测:canvas 保持 pointerEvents:none,
+  // 平时不挡任何按钮;只有指针真的落在番茄上时,才拦截底层的长按停止与翻页手势。
+  const dragRef = useRef<{
+    pointerId: number;
+    body: Matter.Body;
+    dragging: boolean;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    lastT: number;
+    vx: number;
+    vy: number;
+  } | null>(null);
   const tomatoes = useMemo(
     () => mergeHarvestedTomatoes(history, harvestedTomatoes),
     [history, harvestedTomatoes]
@@ -163,8 +177,12 @@ export default function TomatoPhysics() {
     const canvas = canvasRef.current;
     const visualWidth = tomatoVisualSize(tomato.durationSeconds, "summary");
     const radius = (visualWidth / 2) * (window.devicePixelRatio || 1);
-    const x = canvas.width * 0.18 + Math.random() * canvas.width * 0.64;
-    const y = replay ? canvas.height - radius * (1.8 + Math.random() * 4) : -radius * 3;
+    // replay=恢复历史番茄(铺在底部);新完成的番茄从屏幕上部中央「诞生」,
+    // 与完成画面的 🍅 位置呼应——让"刚才那 25 分钟变成了这颗番茄"的因果可见
+    const x = replay
+      ? canvas.width * 0.18 + Math.random() * canvas.width * 0.64
+      : canvas.width * (0.42 + Math.random() * 0.16);
+    const y = replay ? canvas.height - radius * (1.8 + Math.random() * 4) : canvas.height * 0.3;
     const body = Bodies.circle(x, y, radius, {
       restitution: 0.45,
       friction: 0.35,
@@ -178,7 +196,12 @@ export default function TomatoPhysics() {
       }));
     }
     Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.16);
-    Body.setVelocity(body, { x: (Math.random() - 0.5) * 3, y: replay ? 0 : 1 });
+    Body.setVelocity(
+      body,
+      replay
+        ? { x: (Math.random() - 0.5) * 3, y: 0 }
+        : { x: (Math.random() - 0.5) * 2.5, y: -6 - Math.random() * 3 } // 向上弹出再落下
+    );
     Composite.add(engineRef.current.world, body);
     bodiesRef.current.push(body);
     drawnTomatoIdsRef.current.add(tomato.id);
@@ -211,9 +234,127 @@ export default function TomatoPhysics() {
     Composite.add(engine.world, [ground, ceiling, wallL, wallR]);
     if (!motionPermissionApi() && ("DeviceMotionEvent" in window || "DeviceOrientationEvent" in window)) setMotionStatus("unknown");
     if (!("DeviceMotionEvent" in window) && !("DeviceOrientationEvent" in window)) setMotionStatus("unsupported");
+
+    // ── 番茄直接操控:点一下弹起,按住拖走,甩出去抛掷 ──
+    const toCanvasPoint = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left) * (canvas.width / Math.max(1, rect.width)),
+        y: (clientY - rect.top) * (canvas.height / Math.max(1, rect.height)),
+      };
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (!engineRef.current || bodiesRef.current.length === 0) return;
+      const p = toCanvasPoint(e.clientX, e.clientY);
+      const hits = Query.point(bodiesRef.current, p);
+      if (hits.length === 0) return;
+      dragRef.current = {
+        pointerId: e.pointerId,
+        body: hits[hits.length - 1],
+        dragging: false,
+        startX: p.x,
+        startY: p.y,
+        lastX: p.x,
+        lastY: p.y,
+        lastT: performance.now(),
+        vx: 0,
+        vy: 0,
+      };
+      // 抓住番茄时不触发底层的长按停止/滑动翻页(点击事件不受影响)
+      e.stopPropagation();
+      ensureAnimating();
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      const p = toCanvasPoint(e.clientX, e.clientY);
+      const now = performance.now();
+      const dt = Math.max(1, now - drag.lastT);
+      // 折算成 60fps 物理步长的速度,松手时直接作为抛掷初速
+      drag.vx = ((p.x - drag.lastX) / dt) * (1000 / 60);
+      drag.vy = ((p.y - drag.lastY) / dt) * (1000 / 60);
+      drag.lastX = p.x;
+      drag.lastY = p.y;
+      drag.lastT = now;
+      if (!drag.dragging) {
+        // 超过抖动阈值才算拖拽,否则保留"点一下弹起"的手感
+        const dpr = window.devicePixelRatio || 1;
+        if (Math.hypot(p.x - drag.startX, p.y - drag.startY) < 6 * dpr) return;
+        drag.dragging = true;
+        Body.setStatic(drag.body, true);
+      }
+      const radius = (drag.body as Matter.Body & { circleRadius?: number }).circleRadius || 22;
+      Body.setPosition(drag.body, {
+        x: Math.min(Math.max(p.x, radius), canvas.width - radius),
+        y: Math.min(Math.max(p.y, radius), canvas.height - radius),
+      });
+      e.stopPropagation();
+      ensureAnimating();
+    };
+
+    const releaseDrag = (throwIt: boolean) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      if (drag.dragging) {
+        Body.setStatic(drag.body, false);
+        if (throwIt) {
+          const cap = 38;
+          const vx = Math.max(-cap, Math.min(cap, drag.vx));
+          const vy = Math.max(-cap, Math.min(cap, drag.vy));
+          Body.setVelocity(drag.body, { x: vx, y: vy });
+          Body.setAngularVelocity(drag.body, vx * 0.012);
+        }
+      } else {
+        // 只是点了一下:轻轻弹起转个圈,纯粹好玩
+        Body.setVelocity(drag.body, { x: (Math.random() - 0.5) * 6, y: -7 - Math.random() * 4 });
+        Body.setAngularVelocity(drag.body, (Math.random() - 0.5) * 0.3);
+      }
+      dragRef.current = null;
+      ensureAnimating();
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      if (drag.dragging) e.stopPropagation();
+      releaseDrag(true);
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      releaseDrag(false);
+    };
+
+    // 拖拽中拦截 touch 事件,防止 GestureWrapper 当成翻页滑动、浏览器当成滚动
+    const handleTouchMove = (e: TouchEvent) => {
+      if (dragRef.current?.dragging) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (dragRef.current) e.stopPropagation();
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("pointermove", handlePointerMove, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerCancel, true);
+    window.addEventListener("touchmove", handleTouchMove, { capture: true, passive: false });
+    window.addEventListener("touchend", handleTouchEnd, true);
+
     window.addEventListener("resize", resizeWorld);
     window.addEventListener("orientationchange", resizeWorld);
     return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("pointermove", handlePointerMove, true);
+      window.removeEventListener("pointerup", handlePointerUp, true);
+      window.removeEventListener("pointercancel", handlePointerCancel, true);
+      window.removeEventListener("touchmove", handleTouchMove, true);
+      window.removeEventListener("touchend", handleTouchEnd, true);
       window.removeEventListener("resize", resizeWorld);
       window.removeEventListener("orientationchange", resizeWorld);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -288,6 +429,20 @@ export default function TomatoPhysics() {
         if (vCal[angle] === undefined && Math.abs(gy) > 0.5) vCal[angle] = gy >= 0 ? 1 : -1;
         return vCal[angle] ?? 1;
       };
+      // 摇一摇:加速度大幅偏离重力时,给全部番茄一次随机弹跳
+      let lastShake = 0;
+      const maybeShake = (ax: number, ay: number, az: number) => {
+        const mag = Math.sqrt(ax * ax + ay * ay + az * az);
+        const now = Date.now();
+        if (Math.abs(mag - 9.81) > 13 && now - lastShake > 700) {
+          lastShake = now;
+          for (const b of bodiesRef.current) {
+            Body.setVelocity(b, { x: (Math.random() - 0.5) * 18, y: -6 - Math.random() * 9 });
+            Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.4);
+          }
+          ensureAnimating();
+        }
+      };
       const handleMotion = (e: DeviceMotionEvent) => {
         const ax = e.accelerationIncludingGravity?.x;
         const ay = e.accelerationIncludingGravity?.y;
@@ -298,6 +453,7 @@ export default function TomatoPhysics() {
           const g = gravityFromDeviceMotion(ax, ay, angle);
           const fg = { x: g.x, y: g.y * calibrateVSign(angle, g.y) };
           applyGravity(fg);
+          maybeShake(ax, ay, az ?? 0);
           pushDbg({ src: "motion", angle, ax, ay, az: az ?? 0, gvx: fg.x, gvy: fg.y });
         }
       };

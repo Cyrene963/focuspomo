@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import GestureWrapper from "@/components/GestureWrapper";
 import { useStore, type Page } from "@/lib/store";
 import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
@@ -26,6 +26,14 @@ const DOT_LABELS: Record<Page, string> = {
 export default function AppShell() {
   const { page, setPage, focusMode } = useStore();
   const shouldShowTomatoes = focusMode || page === "timer";
+
+  // 切页时短暂浮现页面名:五个匿名圆点对新用户不可发现,这是最轻的补救
+  const [pageLabelVisible, setPageLabelVisible] = useState(true);
+  useEffect(() => {
+    setPageLabelVisible(true);
+    const t = setTimeout(() => setPageLabelVisible(false), 1500);
+    return () => clearTimeout(t);
+  }, [page]);
 
   const go = useCallback((p: Page) => setPage(p), [setPage]);
   const swipeLeft = useCallback(() => {
@@ -133,29 +141,49 @@ export default function AppShell() {
       {!focusMode && (
         <div style={{
           position: "absolute", bottom: "max(24px, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
-          display: "flex", gap: 2, zIndex: 10,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 10,
         }}>
-          {DOT_PAGES.map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => go(p)}
-              className="pressable"
-              aria-label={DOT_LABELS[p]}
-              aria-current={p === page ? "page" : undefined}
-              style={{
-                width: 44, height: 44, borderRadius: 22,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <span style={{
-                width: p === page ? 22 : 6, height: 6, borderRadius: 3,
-                background: p === page ? "var(--accent)" : "var(--text-sec)",
-                opacity: p === page ? 1 : 0.3,
-                transition: "all 0.25s ease",
-              }} />
-            </button>
-          ))}
+          <AnimatePresence>
+            {pageLabelVisible && (
+              <motion.span
+                key={page}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 3 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
+                  color: "var(--text-sec)", padding: "3px 10px", borderRadius: 999,
+                  background: "rgba(45,38,37,0.06)", pointerEvents: "none",
+                }}
+              >
+                {DOT_LABELS[page]}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <div style={{ display: "flex", gap: 2 }}>
+            {DOT_PAGES.map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => go(p)}
+                className="pressable"
+                aria-label={DOT_LABELS[p]}
+                aria-current={p === page ? "page" : undefined}
+                style={{
+                  width: 44, height: 44, borderRadius: 22,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <span style={{
+                  width: p === page ? 22 : 6, height: 6, borderRadius: 3,
+                  background: p === page ? "var(--accent)" : "var(--text-sec)",
+                  opacity: p === page ? 1 : 0.3,
+                  transition: "all 0.25s ease",
+                }} />
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
