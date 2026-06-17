@@ -21,6 +21,24 @@ export const SNAPSHOT_KEYS = [
 
 export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
 export const LOCAL_PERSIST_EVENT = "focuspomo:local-persist";
+export const CLOUD_ORIGIN = "https://focuspomo.bz9.me";
+
+export function isNativeApp() {
+  if (typeof window === "undefined") return false;
+  return window.location.protocol === "capacitor:" || window.location.protocol === "ionic:";
+}
+
+export function apiUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return isNativeApp() ? `${CLOUD_ORIGIN}${normalized}` : normalized;
+}
+
+export function externalUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${CLOUD_ORIGIN}${normalized}`;
+}
 
 export function isSnapshotKey(key: string): key is typeof SNAPSHOT_KEYS[number] {
   return SNAPSHOT_KEYS.includes(key as typeof SNAPSHOT_KEYS[number]);
@@ -255,8 +273,9 @@ export function applySnapshot(data: Snapshot) {
 }
 
 export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     ...init,
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   if (!res.ok) throw new Error(await res.text());

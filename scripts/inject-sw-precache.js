@@ -20,6 +20,7 @@ function walk(dir) {
 
 const assets = walk(staticDir)
   .map(p => '/_next/static/' + path.relative(staticDir, p).split(path.sep).join('/'))
+  .filter(asset => !asset.includes('/chunks/app/api/'))
   .sort();
 
 const markerStart = '// __PRECACHE_NEXT_STATIC_START__';

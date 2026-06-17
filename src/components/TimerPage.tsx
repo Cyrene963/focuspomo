@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
+import { hapticSuccess, showTimerNotification } from "@/lib/nativeBridge";
 import TagSelector from "@/components/TagSelector";
 
 let audioCtx: AudioContext | null = null;
@@ -31,20 +32,6 @@ function unlockAudio() {
   try {
     if (!audioCtx || audioCtx.state === "closed") audioCtx = new AudioContext();
     if (audioCtx.state === "suspended") audioCtx.resume();
-  } catch {}
-}
-
-function notifyDone(enabled: boolean, title: string, body: string) {
-  if (!enabled || typeof window === "undefined" || !("Notification" in window)) return;
-  if (Notification.permission !== "granted") return;
-  try {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.ready
-        .then((reg) => reg.showNotification(title, { body, icon: "/icon-1779372627-192.png", badge: "/favicon-1779372627-32.png" }))
-        .catch(() => new Notification(title, { body, icon: "/icon-1779372627-192.png" }));
-    } else {
-      new Notification(title, { body, icon: "/icon-1779372627-192.png" });
-    }
   } catch {}
 }
 
@@ -120,8 +107,10 @@ export default function TimerPage() {
       playDing(muted);
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 800);
-      try { if (vibration && navigator.vibrate) navigator.vibrate(200); } catch {}
-      notifyDone(notificationsEnabled, isBreak ? "休息结束" : "番茄完成", isBreak ? "可以回到下一轮专注了。" : `${selectedTag.name}完成了，收获一个小番茄。`);
+      void hapticSuccess(vibration);
+      if (notificationsEnabled) {
+        void showTimerNotification(isBreak ? "休息结束" : "番茄完成", isBreak ? "可以回到下一轮专注了。" : `${selectedTag.name}完成了，收获一个小番茄。`);
+      }
     }
     prevStateRef.current = state;
   }, [state, muted, vibration, notificationsEnabled, selectedTag.name, selectedTag.duration, isBreak]);

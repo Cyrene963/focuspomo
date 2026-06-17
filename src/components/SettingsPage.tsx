@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import CloudSyncPanel from "@/components/CloudSyncPanel";
 import AgentConnectPanel from "@/components/AgentConnectPanel";
+import { isNativeApp, notificationPermission, requestNotificationPermission, vibrationSupported } from "@/lib/nativeBridge";
 
 function IOSToggle({ value, onToggle, color = "#34C759" }: { value: boolean; onToggle: () => void; color?: string }) {
   return (
@@ -133,13 +134,13 @@ export default function SettingsPage() {
   const store = useStore();
   const { theme, toggle: toggleTheme } = useTheme();
   const [notificationStatus, setNotificationStatus] = useState(() =>
-    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : isNativeApp() ? "prompt" : "unsupported"
   );
   const durationMin = Math.round(store.selectedTag.duration / 60);
   const shortBreakMin = Math.round(store.shortBreak / 60);
   const longBreakMin = Math.round(store.longBreak / 60);
-  const vibrationSupported = typeof navigator !== "undefined" && "vibrate" in navigator;
-  const notificationSupported = typeof window !== "undefined" && "Notification" in window;
+  const hasVibration = vibrationSupported();
+  const notificationSupported = typeof window !== "undefined" && ("Notification" in window || isNativeApp());
   const setDurationMin = (min: number) => store.setSelectedTagDuration(Math.max(1, Math.min(120, min)) * 60);
   const toggleNotifications = async () => {
     if (!notificationSupported) return;
@@ -147,10 +148,19 @@ export default function SettingsPage() {
       store.setNotificationsEnabled(false);
       return;
     }
-    const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    const permission = await requestNotificationPermission();
     setNotificationStatus(permission);
     store.setNotificationsEnabled(permission === "granted");
   };
+
+  const refreshNotificationStatus = async () => {
+    const permission = await notificationPermission();
+    setNotificationStatus(permission);
+  };
+
+  useEffect(() => {
+    void refreshNotificationStatus();
+  }, []);
 
   return (
     <div style={{
@@ -241,10 +251,10 @@ export default function SettingsPage() {
         />
         <Row
           title="系统通知"
-          subtitle={notificationSupported ? (notificationStatus === "denied" ? "浏览器已拒绝通知，请在系统设置里重新允许。" : "完成番茄或休息结束时发本机通知。iPad 需安装到主屏幕后使用。") : "当前浏览器不支持 Web Notification，已避免显示假功能。"}
+          subtitle={notificationSupported ? (notificationStatus === "denied" ? "通知已被拒绝，请在系统设置里重新允许。" : isNativeApp() ? "App 内会用系统通知提醒番茄和休息结束。" : "完成番茄或休息结束时发本机通知。iPad 需安装到主屏幕后使用。") : "当前环境不支持通知。"}
           right={notificationSupported ? <IOSToggle value={store.notificationsEnabled && notificationStatus === "granted"} onToggle={toggleNotifications} color="#E8644E" /> : undefined}
         />
-        {vibrationSupported && (
+        {hasVibration && (
           <Row
             title="震动反馈"
             subtitle="设备支持时才会生效"
@@ -252,13 +262,22 @@ export default function SettingsPage() {
             noBorder
           />
         )}
-        {!vibrationSupported && (
+        {!hasVibration && (
           <Row
             title="震动反馈"
             subtitle="当前浏览器不支持震动 API，已隐藏开关避免假功能。"
             noBorder
           />
         )}
+      </Section>
+
+      <Section title="权限">
+        <Row
+          title="通知状态"
+          subtitle={`当前：${notificationStatus}`}
+          right={<button type="button" className="pressable" onClick={refreshNotificationStatus} style={{ fontSize: 12, fontWeight: 850, color: "var(--text-sec)" }}>刷新</button>}
+          noBorder
+        />
       </Section>
 
       <Section title="外观">
