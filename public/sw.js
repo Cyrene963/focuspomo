@@ -1,4 +1,4 @@
-const CACHE_NAME = 'focuspomo-RdnucSP0nSfd4fSwteNb1';
+const CACHE_NAME = 'focuspomo-K-MfoWrbpc58Xnb1zMbfV';
 const APP_SHELL_URL = '/';
 
 // Build-time injected from `.next/static` by scripts/inject-sw-precache.js.
@@ -6,18 +6,38 @@ const APP_SHELL_URL = '/';
 // Do not rely only on runtime HTML regex extraction for the offline shell.
 // __PRECACHE_NEXT_STATIC_START__
 const PRECACHE_NEXT_STATIC = [
-  "/_next/static/RdnucSP0nSfd4fSwteNb1/_buildManifest.js",
-  "/_next/static/RdnucSP0nSfd4fSwteNb1/_clientMiddlewareManifest.js",
-  "/_next/static/RdnucSP0nSfd4fSwteNb1/_ssgManifest.js",
-  "/_next/static/chunks/0.16jrjsj-cn3.js",
-  "/_next/static/chunks/03cnjj9mnzy_p.js",
-  "/_next/static/chunks/03~yq9q893hmn.js",
-  "/_next/static/chunks/0gooug2tzqsr3.js",
-  "/_next/static/chunks/0ht900cau6_ur.js",
-  "/_next/static/chunks/0l0v.u5dvusae.js",
-  "/_next/static/chunks/0wb6jdvd3md34.js",
-  "/_next/static/chunks/0y6s8jrmhq3em.css",
-  "/_next/static/chunks/turbopack-17vrofky5om_c.js"
+  "/_next/static/K-MfoWrbpc58Xnb1zMbfV/_buildManifest.js",
+  "/_next/static/K-MfoWrbpc58Xnb1zMbfV/_ssgManifest.js",
+  "/_next/static/chunks/176.d8fc1396f63e2186.js",
+  "/_next/static/chunks/201-d6e366a6e5202822.js",
+  "/_next/static/chunks/234.f21c84acbea9a9c6.js",
+  "/_next/static/chunks/456.bbf2d0b79da07e72.js",
+  "/_next/static/chunks/4b5b508e-5f5d17962b9f626e.js",
+  "/_next/static/chunks/4bd1b696-215e5051988c3dde.js",
+  "/_next/static/chunks/556.66fb82ed9c014ef1.js",
+  "/_next/static/chunks/592.e41a77224cd2669c.js",
+  "/_next/static/chunks/794-5fb6eff04a716ab6.js",
+  "/_next/static/chunks/805.49d67977af0b060a.js",
+  "/_next/static/chunks/834.df0e583c4a9b8b45.js",
+  "/_next/static/chunks/874.ef54054bf530e72f.js",
+  "/_next/static/chunks/899.1813981119fa1f8a.js",
+  "/_next/static/chunks/966.1775eb621d8d3e09.js",
+  "/_next/static/chunks/968.ad134599fff72e81.js",
+  "/_next/static/chunks/app/_global-error/page-3fe98b7f233343d9.js",
+  "/_next/static/chunks/app/_not-found/page-77a504472b19a82f.js",
+  "/_next/static/chunks/app/layout-073c03715d2782ed.js",
+  "/_next/static/chunks/app/page-bb4c7600f0c2ddc7.js",
+  "/_next/static/chunks/framework-93cda6578f6c76ec.js",
+  "/_next/static/chunks/main-3a92c4011eb3965a.js",
+  "/_next/static/chunks/main-app-f8fb339077601f2d.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/app-error-3fe98b7f233343d9.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/forbidden-3fe98b7f233343d9.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/global-error-51035054c89daf8a.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/not-found-3fe98b7f233343d9.js",
+  "/_next/static/chunks/next/dist/client/components/builtin/unauthorized-3fe98b7f233343d9.js",
+  "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+  "/_next/static/chunks/webpack-1ef119fe8fa28428.js",
+  "/_next/static/css/925f0844dc69e749.css"
 ];
 // __PRECACHE_NEXT_STATIC_END__
 

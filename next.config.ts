@@ -8,7 +8,14 @@ const noStoreHeaders = [
   { key: "Expires", value: "0" },
 ];
 
+const isCapacitorBuild = process.env.CAPACITOR_BUILD === "1";
+
 const nextConfig: NextConfig = {
+  ...(isCapacitorBuild ? {
+    output: "export" as const,
+    images: { unoptimized: true },
+    trailingSlash: true,
+  } : {}),
   allowedDevOrigins: ["focuspomo.bz9.me", "pomofocus.bz9.me"],
   // Next 16 can infer /root as the workspace because this VPS also has a
   // top-level package-lock.json. Pin the app root so local/CI builds validate

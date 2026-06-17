@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStore, type PomodoroRecord } from "@/lib/store";
 import { applySnapshot, jsonFetch, readSnapshot, type Snapshot } from "@/lib/cloudSync";
+import { openExternal } from "@/lib/nativeBridge";
 
 type User = { id: string; email: string; name: string | null; picture: string | null; calendarSyncEnabled: boolean };
 
@@ -108,7 +109,7 @@ export default function CloudSyncPanel() {
         busy: false,
         message: needsCalendarConsent ? "需要先单独授权 Google Calendar" : "Calendar 同步失败，请稍后再试",
       }));
-      if (needsCalendarConsent && enabled) window.location.href = "/api/auth/google/calendar";
+      if (needsCalendarConsent && enabled) void openExternal("/api/auth/google/calendar");
     }
   };
 
@@ -127,7 +128,7 @@ export default function CloudSyncPanel() {
           <div style={{ fontSize: 16, fontWeight: 850, color: "var(--text)" }}>Google 云同步</div>
           <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>未登录时只保存在本机浏览器；登录后自动备份任务、番茄记录、标签和设置。Google Calendar 会单独授权，只写入已完成番茄。</div>
         </div>
-        <a href="/api/auth/google" className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</a>
+        <button type="button" onClick={() => void openExternal("/api/auth/google")} className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</button>
         {state.message && <div style={{ fontSize: 12, color: "var(--text-sec)" }}>{state.message}</div>}
       </div>
     );

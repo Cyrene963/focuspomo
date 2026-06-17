@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Matter from "matter-js";
 import { useStore, mergeHarvestedTomatoes, type HarvestedTomato } from "@/lib/store";
 import { gravityFromDeviceMotion, gravityFromDeviceOrientation, resolveScreenAngle } from "@/lib/motionGravity";
+import { addNativeMotionListener, isNativeApp } from "@/lib/nativeBridge";
 import { tomatoVisualSize } from "@/lib/tomatoVisuals";
 
 const { Engine, Bodies, Composite, Body, Query } = Matter;
@@ -226,8 +227,9 @@ export default function TomatoPhysics() {
     const wallR = Bodies.rectangle(canvas.width + 20 * ratio, canvas.height / 2, 40 * ratio, canvas.height * 2, { isStatic: true });
     boundariesRef.current = { ground, ceiling, wallL, wallR };
     Composite.add(engine.world, [ground, ceiling, wallL, wallR]);
-    if (!motionPermissionApi() && ("DeviceMotionEvent" in window || "DeviceOrientationEvent" in window)) setMotionStatus("unknown");
-    if (!("DeviceMotionEvent" in window) && !("DeviceOrientationEvent" in window)) setMotionStatus("unsupported");
+    if (isNativeApp()) setMotionStatus("unknown");
+    else if (!motionPermissionApi() && ("DeviceMotionEvent" in window || "DeviceOrientationEvent" in window)) setMotionStatus("unknown");
+    else if (!("DeviceMotionEvent" in window) && !("DeviceOrientationEvent" in window)) setMotionStatus("unsupported");
 
     // ── 点一下番茄弹一下(纯被动:不 stopPropagation/preventDefault,
     //    滑动翻页与长按停止完全不受影响;移动超过阈值即视为滑动,放弃弹跳)──
@@ -370,6 +372,26 @@ export default function TomatoPhysics() {
           ensureAnimating();
         }
       };
+
+      const nativeCleanup = await addNativeMotionListener((event) => {
+        const angle = resolveScreenAngle();
+        const g = gravityFromDeviceMotion(event.x, event.y, angle);
+        const fg = { x: g.x, y: g.y * calibrateVSign(angle, g.y) };
+        applyGravity(fg);
+        maybeShake(event.x, event.y, event.z);
+        pushDbg({ src: event.source, angle, ax: event.x, ay: event.y, az: event.z, gvx: fg.x, gvy: fg.y });
+      });
+      if (nativeCleanup) {
+        motionCleanupRef.current = () => {
+          nativeCleanup();
+          resetGravity();
+        };
+        setMotionStatus("active");
+        motionInitializedRef.current = true;
+        localStorage.setItem("fp-motion-permission", "granted");
+        return;
+      }
+
       const handleMotion = (e: DeviceMotionEvent) => {
         const ax = e.accelerationIncludingGravity?.x;
         const ay = e.accelerationIncludingGravity?.y;

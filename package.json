@@ -4,10 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/inject-sw-precache.js",
+    "build": "next build --webpack && node scripts/inject-sw-precache.js",
+    "build:ios": "node scripts/build-capacitor.mjs",
+    "cap:sync:ios": "npm run build:ios && cap sync ios",
+    "cap:open:ios": "cap open ios",
     "start": "next start"
   },
   "dependencies": {
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/motion": "^8.0.0",
     "@types/pg": "^8.20.0",
     "framer-motion": "^12.38.0",
     "googleapis": "^172.0.0",

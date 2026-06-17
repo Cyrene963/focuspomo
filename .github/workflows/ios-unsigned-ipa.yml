@@ -1,0 +1,45 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "capacitor.config.ts"
+      - "ios/**"
+      - "package.json"
+      - "package-lock.json"
+      - "public/**"
+      - "scripts/**"
+      - "src/**"
+      - "next.config.ts"
+      - "tsconfig.json"
+
+jobs:
+  unsigned-ipa:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build unsigned IPA
+        run: bash scripts/build-unsigned-ipa.sh
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocusPomo-unsigned-ipa
+          path: dist/FocusPomo-unsigned.ipa
+          if-no-files-found: error
