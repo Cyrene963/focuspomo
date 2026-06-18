@@ -3,12 +3,16 @@ import { createSession, ensureSchema, getSessionUser } from "@/lib/server/db";
 import { enableCalendarSync, decodeOAuthState, googleClient, upsertGoogleUser } from "@/lib/server/google";
 
 function appOriginFor(returnTo?: string) {
+  if (returnTo && returnTo.startsWith("focuspomo://")) return returnTo.replace(/\/?$/, "");
   if (returnTo && /(^|\.)bz9\.me(?::\d+)?$/.test(returnTo)) return `https://${returnTo}`;
   return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
 }
 
 function go(returnTo: string | undefined, auth: string): never {
-  redirect(`${appOriginFor(returnTo)}/?auth=${encodeURIComponent(auth)}`);
+  const target = appOriginFor(returnTo);
+  const hasQuery = target.includes("?");
+  const separator = hasQuery ? "&" : "?";
+  redirect(`${target}${separator}auth=${encodeURIComponent(auth)}`);
 }
 
 export async function completeGoogleCallback(req: Request) {

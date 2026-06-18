@@ -22,6 +22,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>me.cyrene.focuspomo</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>focuspomo</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSMotionUsageDescription</key>
 	<string>FocusPomo uses device motion to let completed tomatoes roll naturally when you tilt the phone.</string>
 	<key>LSRequiresIPhoneOS</key>

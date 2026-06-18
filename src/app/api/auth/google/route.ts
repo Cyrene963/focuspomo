@@ -4,5 +4,6 @@ import { googleAuthUrl } from "@/lib/server/google";
 
 export async function GET(req: Request) {
   await ensureSchema();
-  redirect(googleAuthUrl(req.headers.get("host") || undefined));
+  const returnTo = new URL(req.url).searchParams.get("returnTo") || req.headers.get("host") || undefined;
+  redirect(googleAuthUrl(returnTo || undefined));
 }

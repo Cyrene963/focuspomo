@@ -22,10 +22,11 @@ export const SNAPSHOT_KEYS = [
 export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
 export const LOCAL_PERSIST_EVENT = "focuspomo:local-persist";
 export const CLOUD_ORIGIN = "https://focuspomo.bz9.me";
+export const APP_SCHEME_ORIGIN = "focuspomo://";
 
 export function isNativeApp() {
   if (typeof window === "undefined") return false;
-  return window.location.protocol === "capacitor:" || window.location.protocol === "ionic:";
+  return window.location.protocol === "capacitor:" || window.location.protocol === "ionic:" || window.location.protocol === "focuspomo:";
 }
 
 export function apiUrl(path: string) {

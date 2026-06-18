@@ -1,3 +1,4 @@
+import { registerPlugin } from "@capacitor/core";
 import { apiUrl, externalUrl, isNativeApp } from "@/lib/cloudSync";
 
 type NotificationPermissionState = "prompt" | "granted" | "denied" | "unsupported";
@@ -9,6 +10,7 @@ type MotionGravityEvent = {
 };
 
 let notificationChannelReady = false;
+const FocusPomoSettings = registerPlugin<{ openSettings(): Promise<void> }>("FocusPomoSettings");
 
 export { apiUrl, externalUrl, isNativeApp };
 
@@ -131,6 +133,41 @@ export async function openExternal(path: string) {
     } catch {}
   }
   window.location.href = url;
+}
+
+export async function openInAppBrowser(url: string) {
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(url);
+  const target = isNativeApp() && !hasScheme ? externalUrl(url) : url;
+  if (isNativeApp()) {
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: target, presentationStyle: "fullscreen" });
+      return;
+    } catch {}
+  }
+  window.location.href = target;
+}
+
+export async function closeInAppBrowser() {
+  if (!isNativeApp()) return;
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.close();
+  } catch {}
+}
+
+export async function openAppSettings() {
+  if (!isNativeApp()) return;
+  try {
+    await FocusPomoSettings.openSettings();
+    return;
+  } catch {
+    try {
+      window.location.href = "app-settings:";
+    } catch {
+      try { window.location.href = "app-settings://"; } catch {}
+    }
+  }
 }
 
 export async function addNativeMotionListener(onMotion: (event: MotionGravityEvent) => void): Promise<(() => void) | null> {

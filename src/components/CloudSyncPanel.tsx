@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore, type PomodoroRecord } from "@/lib/store";
-import { applySnapshot, jsonFetch, readSnapshot, type Snapshot } from "@/lib/cloudSync";
-import { openExternal } from "@/lib/nativeBridge";
+import { APP_SCHEME_ORIGIN, applySnapshot, jsonFetch, readSnapshot, type Snapshot } from "@/lib/cloudSync";
+import { closeInAppBrowser, isNativeApp, openInAppBrowser } from "@/lib/nativeBridge";
 
 type User = { id: string; email: string; name: string | null; picture: string | null; calendarSyncEnabled: boolean };
 
@@ -31,6 +31,10 @@ export default function CloudSyncPanel() {
   const history = useStore(s => s.history);
   const [state, setState] = useState<CloudState>({ user: null, loading: true, busy: false, message: "", calendarEnabled: false });
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("ready");
+  const returnTo = useMemo(() => {
+    if (typeof window === "undefined" || !isNativeApp()) return "";
+    return encodeURIComponent(`${APP_SCHEME_ORIGIN}auth`);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -41,6 +45,24 @@ export default function CloudSyncPanel() {
       })
       .catch(() => alive && setState(s => ({ ...s, loading: false, message: "无法读取登录状态" })));
     return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    const onAuth = (event: Event) => {
+      const auth = (event as CustomEvent<{ auth?: string }>).detail?.auth;
+      if (!auth) return;
+      if (auth === "connected" || auth === "calendar_connected") {
+        void closeInAppBrowser();
+        setState(s => ({ ...s, message: auth === "connected" ? "Google 已连接" : "Google Calendar 已连接" }));
+      } else {
+        setState(s => ({ ...s, message: auth }));
+      }
+      jsonFetch<{ user: User | null }>("/api/me")
+        .then(({ user }) => setState(s => ({ ...s, user, loading: false, calendarEnabled: Boolean(user?.calendarSyncEnabled) })))
+        .catch(() => {});
+    };
+    window.addEventListener("focuspomo:auth", onAuth);
+    return () => window.removeEventListener("focuspomo:auth", onAuth);
   }, []);
 
   useEffect(() => {
@@ -109,7 +131,7 @@ export default function CloudSyncPanel() {
         busy: false,
         message: needsCalendarConsent ? "需要先单独授权 Google Calendar" : "Calendar 同步失败，请稍后再试",
       }));
-      if (needsCalendarConsent && enabled) void openExternal("/api/auth/google/calendar");
+      if (needsCalendarConsent && enabled) void openInAppBrowser(`/api/auth/google/calendar?returnTo=${returnTo}`);
     }
   };
 
@@ -128,7 +150,7 @@ export default function CloudSyncPanel() {
           <div style={{ fontSize: 16, fontWeight: 850, color: "var(--text)" }}>Google 云同步</div>
           <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-sec)", lineHeight: 1.55 }}>未登录时只保存在本机浏览器；登录后自动备份任务、番茄记录、标签和设置。Google Calendar 会单独授权，只写入已完成番茄。</div>
         </div>
-        <button type="button" onClick={() => void openExternal("/api/auth/google")} className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</button>
+        <button type="button" onClick={() => void openInAppBrowser(`/api/auth/google?returnTo=${returnTo}`)} className="pressable" style={{ textAlign: "center", borderRadius: 18, padding: "12px 14px", background: "var(--text)", color: "var(--bg)", fontSize: 14, fontWeight: 850, textDecoration: "none" }}>连接 Google</button>
         {state.message && <div style={{ fontSize: 12, color: "var(--text-sec)" }}>{state.message}</div>}
       </div>
     );
