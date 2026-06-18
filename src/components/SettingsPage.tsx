@@ -160,6 +160,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void refreshNotificationStatus();
+    const onFocus = () => { void refreshNotificationStatus(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   return (

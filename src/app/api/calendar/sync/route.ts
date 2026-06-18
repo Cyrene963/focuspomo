@@ -57,7 +57,7 @@ async function hasCalendarPermission(userId: string) {
 
 export async function POST(req: Request) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     const body = (await req.json()) as SyncRequest;
     if (typeof body.enabled === "boolean") {
       if (body.enabled && !(await hasCalendarPermission(user.id))) throw calendarAuthError();

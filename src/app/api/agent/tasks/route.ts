@@ -70,6 +70,10 @@ function bearerToken(req: Request) {
   return scheme?.toLowerCase() === "bearer" ? token : "";
 }
 
+function appSessionIdFromToken(token: string) {
+  return token.startsWith("fpapp_") ? token.slice("fpapp_".length) : "";
+}
+
 function isInternalToken(req: Request) {
   const expected = process.env.FOCUSPOMO_AGENT_TOKEN;
   const actual = bearerToken(req);
@@ -95,6 +99,21 @@ async function userIdForAgentKey(req: Request) {
     [keyHash(token)]
   );
   return rows[0]?.user_id as string | undefined;
+}
+
+async function userIdForAppSession(req: Request) {
+  const token = bearerToken(req);
+  const sessionId = appSessionIdFromToken(token);
+  if (!sessionId) return undefined;
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `SELECT u.id
+       FROM focuspomo_sessions s
+       JOIN focuspomo_users u ON u.id = s.user_id
+      WHERE s.id = $1 AND s.expires_at > now()`,
+    [sessionId]
+  );
+  return rows[0]?.id as string | undefined;
 }
 
 function validString(value: unknown, max: number) {
@@ -172,6 +191,11 @@ async function defaultUserId() {
 async function resolveUserId(req: Request, email?: unknown) {
   await ensureSchema();
   const token = bearerToken(req);
+  if (token.startsWith("fpapp_")) {
+    const appUserId = await userIdForAppSession(req);
+    if (!appUserId) throw Object.assign(new Error("Invalid app session"), { status: 401 });
+    return appUserId;
+  }
   if (token.startsWith("fp_")) {
     const keyedUserId = await userIdForAgentKey(req);
     if (!keyedUserId) throw Object.assign(new Error("Invalid agent key"), { status: 401 });

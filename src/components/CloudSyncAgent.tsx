@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { apiUrl, applySnapshot, hasUsefulLocalSnapshot, jsonFetch, LOCAL_PERSIST_EVENT, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
+import { applySnapshot, hasUsefulLocalSnapshot, jsonFetch, LOCAL_PERSIST_EVENT, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
 
 type CloudSnapshotResponse = {
   snapshot: {
@@ -184,10 +184,8 @@ export default function CloudSyncAgent() {
     lastCalendarSignature.current = signature;
 
     const timer = window.setTimeout(() => {
-      fetch(apiUrl("/api/calendar/sync"), {
+      jsonFetch("/api/calendar/sync", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ records: completed }),
       }).catch(() => {});
     }, 1200);

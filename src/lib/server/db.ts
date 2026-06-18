@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from "pg";
 
 const COOKIE_NAME = "fp_session";
 const SESSION_DAYS = 90;
+const APP_SESSION_TOKEN_PREFIX = "fpapp_";
 
 function cookieDomain() {
   return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz9.me" : undefined);
@@ -28,6 +29,24 @@ function clearCookieOptions() {
     expires: new Date(0),
     maxAge: 0,
   };
+}
+
+function bearerToken(req?: Request) {
+  if (!req) return "";
+  const raw = req.headers.get("authorization") || "";
+  const [scheme, token] = raw.split(/\s+/, 2);
+  return scheme?.toLowerCase() === "bearer" ? token || "" : "";
+}
+
+function appSessionIdFromToken(token: string) {
+  return token.startsWith(APP_SESSION_TOKEN_PREFIX) ? token.slice(APP_SESSION_TOKEN_PREFIX.length) : "";
+}
+
+async function sessionIdFromRequest(req?: Request) {
+  const jar = await cookies();
+  const cookieSessionId = jar.get(COOKIE_NAME)?.value || "";
+  if (cookieSessionId) return cookieSessionId;
+  return appSessionIdFromToken(bearerToken(req));
 }
 
 let pool: Pool | null = null;
@@ -125,22 +144,28 @@ export async function createSession(userId: string) {
   );
   const jar = await cookies();
   jar.set(COOKIE_NAME, id, sessionCookieOptions(expiresAt));
+  return id;
 }
 
-export async function clearSession() {
+export async function clearSession(req?: Request) {
   const jar = await cookies();
-  const sessionId = jar.get(COOKIE_NAME)?.value;
-  if (sessionId) {
+  const sessionIds = new Set<string>();
+  const cookieSessionId = jar.get(COOKIE_NAME)?.value;
+  if (cookieSessionId) sessionIds.add(cookieSessionId);
+  const bearerSessionId = appSessionIdFromToken(bearerToken(req));
+  if (bearerSessionId) sessionIds.add(bearerSessionId);
+  if (sessionIds.size > 0) {
     await ensureSchema();
-    await getPool().query("DELETE FROM focuspomo_sessions WHERE id = $1", [sessionId]);
+    for (const sessionId of sessionIds) {
+      await getPool().query("DELETE FROM focuspomo_sessions WHERE id = $1", [sessionId]);
+    }
   }
   jar.set(COOKIE_NAME, "", clearCookieOptions());
 }
 
-export async function getSessionUser(client?: PoolClient): Promise<SessionUser | null> {
+export async function getSessionUser(req?: Request, client?: PoolClient): Promise<SessionUser | null> {
   await ensureSchema();
-  const jar = await cookies();
-  const sessionId = jar.get(COOKIE_NAME)?.value;
+  const sessionId = await sessionIdFromRequest(req);
   if (!sessionId) return null;
   const db = client || getPool();
   const { rows } = await db.query(
@@ -160,8 +185,8 @@ export async function getSessionUser(client?: PoolClient): Promise<SessionUser |
   };
 }
 
-export async function requireSessionUser() {
-  const user = await getSessionUser();
+export async function requireSessionUser(req?: Request) {
+  const user = await getSessionUser(req);
   if (!user) {
     const err = new Error("Not signed in");
     (err as Error & { status?: number }).status = 401;

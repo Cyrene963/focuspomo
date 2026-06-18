@@ -15,6 +15,8 @@ type FocusPomoMotionPlugin = {
   addListener(eventName: "accel", listenerFunc: (event: MotionGravityEvent) => void): Promise<PluginListenerHandle>;
 };
 
+type NotificationDescriptor = { id: number };
+
 let notificationChannelReady = false;
 const FocusPomoSettings = registerPlugin<{ openSettings(): Promise<void> }>("FocusPomoSettings");
 const FocusPomoMotion = registerPlugin<FocusPomoMotionPlugin>("FocusPomoMotion");
@@ -175,6 +177,40 @@ export async function openAppSettings() {
       try { window.location.href = "app-settings://"; } catch {}
     }
   }
+}
+
+function timerNotificationId(kind: "focus" | "break") {
+  return kind === "focus" ? 24001 : 24002;
+}
+
+export async function scheduleTimerNotification(kind: "focus" | "break", title: string, body: string, secondsFromNow: number) {
+  const permission = await notificationPermission();
+  if (permission !== "granted") return;
+  if (!isNativeApp()) return;
+  try {
+    await ensureNotificationChannel();
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: timerNotificationId(kind) }] });
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: timerNotificationId(kind),
+        title,
+        body,
+        channelId: "focuspomo-timer",
+        schedule: { at: new Date(Date.now() + Math.max(5, secondsFromNow) * 1000) },
+        smallIcon: "ic_stat_icon_config_sample",
+        extra: { kind },
+      }],
+    });
+  } catch {}
+}
+
+export async function cancelTimerNotifications() {
+  if (!isNativeApp()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: timerNotificationId("focus") }, { id: timerNotificationId("break") }] });
+  } catch {}
 }
 
 export async function addNativeMotionListener(onMotion: (event: MotionGravityEvent) => void): Promise<(() => void) | null> {

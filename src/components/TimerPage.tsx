@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { swipeLeftFrom, swipeRightFrom } from "@/lib/pageNavigation";
-import { hapticSuccess, showTimerNotification } from "@/lib/nativeBridge";
+import { hapticSuccess, isNativeApp, showTimerNotification } from "@/lib/nativeBridge";
 import TagSelector from "@/components/TagSelector";
 
 let audioCtx: AudioContext | null = null;
@@ -108,7 +108,7 @@ export default function TimerPage() {
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 800);
       void hapticSuccess(vibration);
-      if (notificationsEnabled) {
+      if (notificationsEnabled && !isNativeApp()) {
         void showTimerNotification(isBreak ? "休息结束" : "番茄完成", isBreak ? "可以回到下一轮专注了。" : `${selectedTag.name}完成了，收获一个小番茄。`);
       }
     }

@@ -1,28 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { jsonFetch } from "@/lib/cloudSync";
 
 type AgentKeyState = {
   connected: boolean;
   key: string | null;
   keyInfo: { id: string; label: string; created_at: string; last_used_at: string | null } | null;
-  mcp: {
-    endpoint: string;
-    project: string;
-    resources: string[];
-    actions: string[];
-  };
+  mcp: { endpoint: string; project: string; resources: string[]; actions: string[] };
 };
 
 type User = { id: string; email: string; name: string | null };
 
-const cardStyle: React.CSSProperties = {
-  padding: 18,
-  display: "grid",
-  gap: 12,
-};
-
+const cardStyle: React.CSSProperties = { padding: 18, display: "grid", gap: 12 };
 const codeStyle: React.CSSProperties = {
   borderRadius: 14,
   background: "rgba(45,38,37,0.06)",
@@ -37,13 +27,21 @@ const codeStyle: React.CSSProperties = {
 
 function useSignedInUser() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
+  const refresh = useCallback(() => {
     jsonFetch<{ user: User | null }>("/api/me")
-      .then(({ user }) => { if (alive) setUser(user); })
-      .catch(() => { if (alive) setUser(null); });
-    return () => { alive = false; };
+      .then(({ user }) => setUser(user))
+      .catch(() => setUser(null));
   }, []);
+  useEffect(() => {
+    refresh();
+    const onAuth = () => refresh();
+    window.addEventListener("focuspomo:auth", onAuth);
+    window.addEventListener("focus", onAuth);
+    return () => {
+      window.removeEventListener("focuspomo:auth", onAuth);
+      window.removeEventListener("focus", onAuth);
+    };
+  }, [refresh]);
   return user;
 }
 
@@ -53,14 +51,17 @@ export default function AgentConnectPanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  const refreshState = useCallback(() => {
+    if (!user) return;
+    jsonFetch<AgentKeyState>("/api/agent/key")
+      .then(data => setState(data))
+      .catch(() => setMessage("无法读取 Agent 连接状态"));
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
-    let alive = true;
-    jsonFetch<AgentKeyState>("/api/agent/key")
-      .then(data => { if (alive) setState(data); })
-      .catch(() => { if (alive) setMessage("无法读取 Agent 连接状态"); });
-    return () => { alive = false; };
-  }, [user]);
+    refreshState();
+  }, [user, refreshState]);
 
   const instruction = useMemo(() => {
     if (!state) return "";
@@ -85,7 +86,7 @@ export default function AgentConnectPanel() {
     try {
       const data = await jsonFetch<AgentKeyState>("/api/agent/key", { method: "POST", body: JSON.stringify({ label: "AI Agent" }) });
       setState(data);
-      setMessage("已生成新的 Agent Key。只会完整显示这一次，请复制保存。旧 key 已失效。");
+      setMessage("已生成新的 Agent Key，只会显示这一次。");
     } catch {
       setMessage("生成失败，请稍后再试。");
     } finally {
@@ -98,7 +99,7 @@ export default function AgentConnectPanel() {
       await navigator.clipboard.writeText(instruction);
       setMessage("已复制给 AI Agent 的连接说明。");
     } catch {
-      setMessage("复制失败，可以手动选择下方文字。");
+      setMessage("复制失败，可以手动选中下面文本。");
     }
   };
 

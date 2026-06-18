@@ -1,18 +1,39 @@
+import crypto from "crypto";
 import { redirect } from "next/navigation";
 import { createSession, ensureSchema, getSessionUser } from "@/lib/server/db";
 import { enableCalendarSync, decodeOAuthState, googleClient, upsertGoogleUser } from "@/lib/server/google";
 
-function appOriginFor(returnTo?: string) {
-  if (returnTo && returnTo.startsWith("focuspomo://")) return returnTo.replace(/\/?$/, "");
-  if (returnTo && /(^|\.)bz9\.me(?::\d+)?$/.test(returnTo)) return `https://${returnTo}`;
+function webAppOrigin() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
 }
 
+function isNativeAppReturn(returnTo?: string) {
+  return Boolean(returnTo && returnTo.startsWith("focuspomo://"));
+}
+
+function nativeAuthRedirect(returnTo: string | undefined, auth: string): never {
+  const target = new URL("/native-auth", webAppOrigin());
+  target.searchParams.set("auth", auth);
+  if (returnTo) {
+    try {
+      const nonce = new URL(returnTo).searchParams.get("nonce");
+      if (nonce) target.searchParams.set("nonce", nonce);
+    } catch {}
+  }
+  redirect(target.toString());
+}
+
 function go(returnTo: string | undefined, auth: string): never {
-  const target = appOriginFor(returnTo);
-  const hasQuery = target.includes("?");
-  const separator = hasQuery ? "&" : "?";
-  redirect(`${target}${separator}auth=${encodeURIComponent(auth)}`);
+  if (isNativeAppReturn(returnTo)) nativeAuthRedirect(returnTo, auth);
+  const target = new URL(webAppOrigin());
+  if (returnTo && /(^|\.)bz9\.me(?::\d+)?$/.test(returnTo)) {
+    try {
+      const parsed = new URL(returnTo.startsWith("http") ? returnTo : `https://${returnTo}`);
+      target.search = parsed.search;
+    } catch {}
+  }
+  target.searchParams.set("auth", auth);
+  redirect(target.toString());
 }
 
 export async function completeGoogleCallback(req: Request) {
@@ -36,6 +57,10 @@ export async function completeGoogleCallback(req: Request) {
     go(oauthState.returnTo, "calendar_connected");
   }
 
-  await createSession(userId);
+  const sessionId = await createSession(userId);
+  if (isNativeAppReturn(oauthState.returnTo)) {
+    const appToken = `fpapp_${sessionId}`;
+    go(oauthState.returnTo, `token:${appToken}`);
+  }
   go(oauthState.returnTo, "connected");
 }

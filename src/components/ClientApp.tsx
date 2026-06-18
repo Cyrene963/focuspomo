@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import CloudSyncAgent from "@/components/CloudSyncAgent";
 import AchievementCelebration from "@/components/AchievementCelebration";
 import { useStore } from "@/lib/store";
-import { APP_SCHEME_ORIGIN, isNativeApp } from "@/lib/cloudSync";
+import { APP_SESSION_TOKEN_KEY, APP_SCHEME_ORIGIN, isNativeApp } from "@/lib/cloudSync";
 
 export default function ClientApp() {
   const state = useStore(s => s.state);
@@ -37,6 +37,19 @@ export default function ClientApp() {
       const parsed = new URL(url.replace(APP_SCHEME_ORIGIN, "https://focuspomo.local/"));
       const auth = parsed.searchParams.get("auth");
       if (!auth) return;
+      if (auth.startsWith("token:")) {
+        const token = auth.slice("token:".length).split(":")[0] || "";
+        if (token) {
+          window.localStorage.setItem(APP_SESSION_TOKEN_KEY, token);
+          try {
+            const { Browser } = await import("@capacitor/browser");
+            await Browser.close();
+          } catch {}
+          window.document.documentElement.setAttribute("data-focuspomo-auth", "connected");
+          window.dispatchEvent(new CustomEvent("focuspomo:auth", { detail: { auth: "connected" } }));
+        }
+        return;
+      }
       if (auth === "connected" || auth === "calendar_connected") {
         try {
           const { Browser } = await import("@capacitor/browser");
