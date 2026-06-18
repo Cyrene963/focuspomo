@@ -18,7 +18,6 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.4.0",
     "@capacitor/local-notifications": "^8.2.0",
-    "@capacitor/motion": "^8.0.0",
     "@types/pg": "^8.20.0",
     "framer-motion": "^12.38.0",
     "googleapis": "^172.0.0",

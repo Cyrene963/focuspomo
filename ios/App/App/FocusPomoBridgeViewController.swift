@@ -6,5 +6,6 @@ final class FocusPomoBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(FocusPomoSettingsPlugin())
+        bridge?.registerPluginInstance(FocusPomoMotionPlugin())
     }
 }

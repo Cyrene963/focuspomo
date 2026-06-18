@@ -1,4 +1,4 @@
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { apiUrl, externalUrl, isNativeApp } from "@/lib/cloudSync";
 
 type NotificationPermissionState = "prompt" | "granted" | "denied" | "unsupported";
@@ -9,8 +9,15 @@ type MotionGravityEvent = {
   source: "native-motion";
 };
 
+type FocusPomoMotionPlugin = {
+  start(): Promise<{ available: boolean }>;
+  stop(): Promise<void>;
+  addListener(eventName: "accel", listenerFunc: (event: MotionGravityEvent) => void): Promise<PluginListenerHandle>;
+};
+
 let notificationChannelReady = false;
 const FocusPomoSettings = registerPlugin<{ openSettings(): Promise<void> }>("FocusPomoSettings");
+const FocusPomoMotion = registerPlugin<FocusPomoMotionPlugin>("FocusPomoMotion");
 
 export { apiUrl, externalUrl, isNativeApp };
 
@@ -172,18 +179,27 @@ export async function openAppSettings() {
 
 export async function addNativeMotionListener(onMotion: (event: MotionGravityEvent) => void): Promise<(() => void) | null> {
   if (!isNativeApp()) return null;
+  let listener: PluginListenerHandle | undefined;
   try {
-    const { Motion } = await import("@capacitor/motion");
-    const listener = await Motion.addListener("accel", (event) => {
-      const gravity = event.accelerationIncludingGravity || event.acceleration;
-      if (!gravity) return;
-      const { x, y, z } = gravity;
+    listener = await FocusPomoMotion.addListener("accel", (event) => {
+      const { x, y, z } = event;
       if (typeof x === "number" && typeof y === "number") {
         onMotion({ x, y, z: typeof z === "number" ? z : 0, source: "native-motion" });
       }
     });
-    return () => { void listener.remove(); };
+    const started = await FocusPomoMotion.start();
+    const listenerHandle = listener;
+    if (!listenerHandle) return null;
+    if (!started.available) {
+      await listenerHandle.remove();
+      return null;
+    }
+    return async () => {
+      try { await listenerHandle.remove(); } catch {}
+      try { await FocusPomoMotion.stop(); } catch {}
+    };
   } catch {
+    try { await listener?.remove(); } catch {}
     return null;
   }
 }
