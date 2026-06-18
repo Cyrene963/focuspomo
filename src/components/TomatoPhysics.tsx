@@ -33,6 +33,10 @@ function motionPermissionApi() {
   return motion?.requestPermission || orientation?.requestPermission;
 }
 
+function isNativeMotionFlow() {
+  return isNativeApp();
+}
+
 export default function TomatoPhysics() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -48,6 +52,7 @@ export default function TomatoPhysics() {
   const [motionStatus, setMotionStatus] = useState<MotionStatus>("unknown");
   const motionCleanupRef = useRef<(() => void) | null>(null);
   const motionInitializedRef = useRef(false);
+  const enableMotionRef = useRef<(() => Promise<void>) | null>(null);
   // Tilt debug HUD: enable with ?tiltdebug=1 or localStorage fp-tilt-debug=1.
   const [tiltDebug, setTiltDebug] = useState(false);
   const [tiltDbg, setTiltDbg] = useState<null | { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }>(null);
@@ -76,15 +81,15 @@ export default function TomatoPhysics() {
     loadImage("/tomato-red.svg").then(img => { redImgRef.current = img; setRedImg(img); }).catch(() => {});
     loadImage("/tomato-yellow.svg").then(img => { yellowImgRef.current = img; setYellowImg(img); }).catch(() => {});
 
-    // 从localStorage恢复授权状态，如果之前授权过，自动启动重力感应
+    if (isNativeMotionFlow()) return;
+
     try {
       const savedStatus = localStorage.getItem("fp-motion-permission");
       if (savedStatus === "granted") {
         motionInitializedRef.current = true;
-        // 延迟一点，等engine初始化完成后自动启动
         setTimeout(() => {
           if (tiltTomatoes) {
-            enableMotion();
+            enableMotionRef.current?.();
           }
         }, 500);
       } else if (savedStatus === "denied") {
@@ -100,6 +105,25 @@ export default function TomatoPhysics() {
       setTiltDebug(on);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!isNativeMotionFlow()) return;
+    if (!tiltTomatoes || motionStatus === "active" || motionStatus === "unsupported") return;
+    const id = window.setTimeout(() => {
+      void enableMotionRef.current?.();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [tiltTomatoes, motionStatus]);
+
+  useEffect(() => {
+    if (tiltTomatoes) return;
+    motionCleanupRef.current?.();
+    motionCleanupRef.current = null;
+    motionInitializedRef.current = false;
+    if (motionStatus === "active") {
+      setMotionStatus("unknown");
+    }
+  }, [tiltTomatoes, motionStatus]);
 
   const ensureAnimating = () => {
     if (animFrameRef.current || !canvasRef.current || !engineRef.current) return;
@@ -314,15 +338,12 @@ export default function TomatoPhysics() {
   }, [displayTomatoes]);
 
   const enableMotion = async () => {
-    // 如果已经初始化过且在active状态，不重复请求
-    if (motionInitializedRef.current && motionStatus === "active") {
-      return;
-    }
+    if (motionInitializedRef.current && motionStatus === "active") return;
 
     const requestPermission = motionPermissionApi();
     try {
       setTiltTomatoes(true);
-      if (requestPermission) {
+      if (!isNativeMotionFlow() && requestPermission) {
         const result = await requestPermission();
         if (result !== "granted") {
           setMotionStatus("denied");
@@ -331,34 +352,38 @@ export default function TomatoPhysics() {
         }
         localStorage.setItem("fp-motion-permission", "granted");
       }
+
       const engine = engineRef.current;
       if (!engine) return;
       motionCleanupRef.current?.();
-      let seenMotion = false;
+
+      const resetGravity = () => {
+        if (!engineRef.current) return;
+        engineRef.current.gravity.x = 0;
+        engineRef.current.gravity.y = 1.2;
+      };
+
       const applyGravity = ({ x, y }: { x: number; y: number }) => {
         engine.gravity.x = x;
         engine.gravity.y = y;
         setMotionStatus("active");
         ensureAnimating();
       };
+
       const pushDbg = (d: { src: string; angle: number; ax?: number; ay?: number; az?: number; beta?: number | null; gamma?: number | null; gvx: number; gvy: number }) => {
         if (!tiltDebugRef.current) return;
         const now = Date.now();
-        if (now - lastDbgRef.current < 100) return; // throttle HUD to ~10fps
+        if (now - lastDbgRef.current < 100) return;
         lastDbgRef.current = now;
         setTiltDbg(d);
       };
-      // Per-orientation vertical-sign auto-calibration. iOS accelerationIncludingGravity
-      // sign AND the landscape 90/270 ambiguity are both unreliable on iPad, so instead of
-      // hardcoding signs we lock the vertical direction the first time we see a strong
-      // vertical reading in each orientation (i.e. when the user is holding the device up to
-      // view it, gravity should point toward the bottom of the screen). Robust, no guessing.
+
       const vCal: Record<number, number> = {};
       const calibrateVSign = (angle: number, gy: number): number => {
         if (vCal[angle] === undefined && Math.abs(gy) > 0.5) vCal[angle] = gy >= 0 ? 1 : -1;
         return vCal[angle] ?? 1;
       };
-      // 摇一摇:加速度大幅偏离重力时,给全部番茄一次随机弹跳
+
       let lastShake = 0;
       const maybeShake = (ax: number, ay: number, az: number) => {
         const mag = Math.sqrt(ax * ax + ay * ay + az * az);
@@ -381,6 +406,7 @@ export default function TomatoPhysics() {
         maybeShake(event.x, event.y, event.z);
         pushDbg({ src: event.source, angle, ax: event.x, ay: event.y, az: event.z, gvx: fg.x, gvy: fg.y });
       });
+
       if (nativeCleanup) {
         motionCleanupRef.current = () => {
           nativeCleanup();
@@ -388,10 +414,19 @@ export default function TomatoPhysics() {
         };
         setMotionStatus("active");
         motionInitializedRef.current = true;
-        localStorage.setItem("fp-motion-permission", "granted");
+        if (!isNativeMotionFlow()) {
+          localStorage.setItem("fp-motion-permission", "granted");
+        }
         return;
       }
 
+      if (isNativeMotionFlow()) {
+        resetGravity();
+        setMotionStatus("unsupported");
+        return;
+      }
+
+      let seenMotion = false;
       const handleMotion = (e: DeviceMotionEvent) => {
         const ax = e.accelerationIncludingGravity?.x;
         const ay = e.accelerationIncludingGravity?.y;
@@ -406,6 +441,7 @@ export default function TomatoPhysics() {
           pushDbg({ src: "motion", angle, ax, ay, az: az ?? 0, gvx: fg.x, gvy: fg.y });
         }
       };
+
       const handleOrientation = (e: DeviceOrientationEvent) => {
         if (seenMotion) return;
         const angle = resolveScreenAngle();
@@ -414,11 +450,7 @@ export default function TomatoPhysics() {
         applyGravity(fg);
         pushDbg({ src: "orient", angle, beta: e.beta, gamma: e.gamma, gvx: fg.x, gvy: fg.y });
       };
-      const resetGravity = () => {
-        if (!engineRef.current) return;
-        engineRef.current.gravity.x = 0;
-        engineRef.current.gravity.y = 1.2;
-      };
+
       window.addEventListener("devicemotion", handleMotion);
       window.addEventListener("deviceorientation", handleOrientation);
       motionCleanupRef.current = () => {
@@ -429,12 +461,14 @@ export default function TomatoPhysics() {
       setMotionStatus("active");
       motionInitializedRef.current = true;
     } catch {
-      setMotionStatus("denied");
+      setMotionStatus(isNativeMotionFlow() ? "unsupported" : "denied");
     }
   };
 
+  enableMotionRef.current = enableMotion;
+
   if (!displayTomatoes) return null;
-  const showMotionButton = page === "timer" && tiltTomatoes && motionStatus !== "active" && motionStatus !== "unsupported";
+  const showMotionButton = !isNativeMotionFlow() && page === "timer" && tiltTomatoes && motionStatus !== "active" && motionStatus !== "unsupported";
   const motionLabel = motionStatus === "denied" ? "倾斜权限未开启" : "授权倾斜";
 
   return (

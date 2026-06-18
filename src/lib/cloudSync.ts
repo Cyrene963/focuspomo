@@ -21,11 +21,21 @@ export const SNAPSHOT_KEYS = [
 
 export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
 export const LOCAL_PERSIST_EVENT = "focuspomo:local-persist";
+export const APP_SESSION_TOKEN_KEY = "fp-app-session-token";
+export const NATIVE_AUTH_PENDING_KEY = "fp-native-auth-pending";
 export const CLOUD_ORIGIN = "https://focuspomo.bz9.me";
+export const APP_SCHEME_ORIGIN = "focuspomo://";
+
+export type NativeAuthFlow = "signin" | "calendar";
+type NativeAuthPending = {
+  nonce: string;
+  flow: NativeAuthFlow;
+  createdAt: number;
+};
 
 export function isNativeApp() {
   if (typeof window === "undefined") return false;
-  return window.location.protocol === "capacitor:" || window.location.protocol === "ionic:";
+  return window.location.protocol === "capacitor:" || window.location.protocol === "ionic:" || window.location.protocol === "focuspomo:";
 }
 
 export function apiUrl(path: string) {
@@ -38,6 +48,37 @@ export function externalUrl(path: string) {
   if (/^https?:\/\//i.test(path)) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${CLOUD_ORIGIN}${normalized}`;
+}
+
+function createNonce() {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+export function createNativeAuthReturnTo(flow: NativeAuthFlow) {
+  if (typeof window === "undefined") return "";
+  const pending: NativeAuthPending = { nonce: createNonce(), flow, createdAt: Date.now() };
+  window.localStorage.setItem(NATIVE_AUTH_PENDING_KEY, JSON.stringify(pending));
+  return encodeURIComponent(`${APP_SCHEME_ORIGIN}auth?nonce=${encodeURIComponent(pending.nonce)}`);
+}
+
+export function readNativeAuthPending(): NativeAuthPending | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(NATIVE_AUTH_PENDING_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<NativeAuthPending>;
+    if (typeof parsed.nonce !== "string" || typeof parsed.flow !== "string") return null;
+    if (parsed.flow !== "signin" && parsed.flow !== "calendar") return null;
+    return { nonce: parsed.nonce, flow: parsed.flow, createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0 };
+  } catch {
+    return null;
+  }
+}
+
+export function clearNativeAuthPending() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(NATIVE_AUTH_PENDING_KEY);
 }
 
 export function isSnapshotKey(key: string): key is typeof SNAPSHOT_KEYS[number] {
@@ -273,10 +314,16 @@ export function applySnapshot(data: Snapshot) {
 }
 
 export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers || {});
+  headers.set("Content-Type", "application/json");
+  if (isNativeApp() && typeof window !== "undefined") {
+    const token = window.localStorage.getItem(APP_SESSION_TOKEN_KEY);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
   const res = await fetch(apiUrl(url), {
     ...init,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    headers,
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<T>;

@@ -1,3 +1,4 @@
+import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { apiUrl, externalUrl, isNativeApp } from "@/lib/cloudSync";
 
 type NotificationPermissionState = "prompt" | "granted" | "denied" | "unsupported";
@@ -8,7 +9,17 @@ type MotionGravityEvent = {
   source: "native-motion";
 };
 
+type FocusPomoMotionPlugin = {
+  start(): Promise<{ available: boolean }>;
+  stop(): Promise<void>;
+  addListener(eventName: "accel", listenerFunc: (event: MotionGravityEvent) => void): Promise<PluginListenerHandle>;
+};
+
+type NotificationDescriptor = { id: number };
+
 let notificationChannelReady = false;
+const FocusPomoSettings = registerPlugin<{ openSettings(): Promise<void> }>("FocusPomoSettings");
+const FocusPomoMotion = registerPlugin<FocusPomoMotionPlugin>("FocusPomoMotion");
 
 export { apiUrl, externalUrl, isNativeApp };
 
@@ -133,20 +144,98 @@ export async function openExternal(path: string) {
   window.location.href = url;
 }
 
+export async function openInAppBrowser(url: string) {
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(url);
+  const target = isNativeApp() && !hasScheme ? externalUrl(url) : url;
+  if (isNativeApp()) {
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: target, presentationStyle: "fullscreen" });
+      return;
+    } catch {}
+  }
+  window.location.href = target;
+}
+
+export async function closeInAppBrowser() {
+  if (!isNativeApp()) return;
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.close();
+  } catch {}
+}
+
+export async function openAppSettings() {
+  if (!isNativeApp()) return;
+  try {
+    await FocusPomoSettings.openSettings();
+    return;
+  } catch {
+    try {
+      window.location.href = "app-settings:";
+    } catch {
+      try { window.location.href = "app-settings://"; } catch {}
+    }
+  }
+}
+
+function timerNotificationId(kind: "focus" | "break") {
+  return kind === "focus" ? 24001 : 24002;
+}
+
+export async function scheduleTimerNotification(kind: "focus" | "break", title: string, body: string, secondsFromNow: number) {
+  const permission = await notificationPermission();
+  if (permission !== "granted") return;
+  if (!isNativeApp()) return;
+  try {
+    await ensureNotificationChannel();
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: timerNotificationId(kind) }] });
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: timerNotificationId(kind),
+        title,
+        body,
+        channelId: "focuspomo-timer",
+        schedule: { at: new Date(Date.now() + Math.max(5, secondsFromNow) * 1000) },
+        smallIcon: "ic_stat_icon_config_sample",
+        extra: { kind },
+      }],
+    });
+  } catch {}
+}
+
+export async function cancelTimerNotifications() {
+  if (!isNativeApp()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: timerNotificationId("focus") }, { id: timerNotificationId("break") }] });
+  } catch {}
+}
+
 export async function addNativeMotionListener(onMotion: (event: MotionGravityEvent) => void): Promise<(() => void) | null> {
   if (!isNativeApp()) return null;
+  let listener: PluginListenerHandle | undefined;
   try {
-    const { Motion } = await import("@capacitor/motion");
-    const listener = await Motion.addListener("accel", (event) => {
-      const gravity = event.accelerationIncludingGravity || event.acceleration;
-      if (!gravity) return;
-      const { x, y, z } = gravity;
+    listener = await FocusPomoMotion.addListener("accel", (event) => {
+      const { x, y, z } = event;
       if (typeof x === "number" && typeof y === "number") {
         onMotion({ x, y, z: typeof z === "number" ? z : 0, source: "native-motion" });
       }
     });
-    return () => { void listener.remove(); };
+    const started = await FocusPomoMotion.start();
+    const listenerHandle = listener;
+    if (!listenerHandle) return null;
+    if (!started.available) {
+      await listenerHandle.remove();
+      return null;
+    }
+    return async () => {
+      try { await listenerHandle.remove(); } catch {}
+      try { await FocusPomoMotion.stop(); } catch {}
+    };
   } catch {
+    try { await listener?.remove(); } catch {}
     return null;
   }
 }

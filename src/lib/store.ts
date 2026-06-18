@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { writeClientUpdatedAt, writeLocalSnapshotKey, type SNAPSHOT_KEYS } from "@/lib/cloudSync";
+import { cancelTimerNotifications, scheduleTimerNotification } from "@/lib/nativeBridge";
 import type { AchievementId } from "@/lib/achievements";
 
 export type TimerState = 'idle' | 'running' | 'completed';
@@ -152,6 +153,18 @@ function clearActiveTimer() {
 
 function saveActiveTimer(snapshot: ActiveTimerSnapshot) {
   saveJSON('fp-active-timer', snapshot);
+}
+
+async function armTimerNotification(enabled: boolean, session: TimerSession, durationSeconds: number, title: string, body: string) {
+  if (!enabled) return;
+  await cancelTimerNotifications();
+  if (durationSeconds > 0) {
+    await scheduleTimerNotification(session === "focus" ? "focus" : "break", title, body, durationSeconds);
+  }
+}
+
+async function disarmTimerNotification() {
+  await cancelTimerNotifications();
 }
 
 function buildCompletedRecord(tag: Tag, activeDuration: number, startTime: number, task?: TaskItem): PomodoroRecord {
@@ -349,6 +362,7 @@ export const useStore = create<Store>((set, get) => ({
     const startTime = Date.now();
     saveActiveTimer({ state: 'running', session: 'focus', tagId: selectedTag.id, activeDuration: selectedTag.duration, startTime });
     set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime, page: 'timer', focusMode: true });
+    void armTimerNotification(get().notificationsEnabled, 'focus', selectedTag.duration, '番茄完成', `${selectedTag.name} 完成了，回到下一步吧。`);
   },
   startTask: (taskId) => {
     const { selectedTag, tasks } = get();
@@ -357,6 +371,7 @@ export const useStore = create<Store>((set, get) => ({
     const startTime = Date.now();
     saveActiveTimer({ state: 'running', session: 'focus', tagId: selectedTag.id, activeDuration: selectedTag.duration, startTime, taskId });
     set({ state: 'running', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime, page: 'timer', focusMode: true });
+    void armTimerNotification(get().notificationsEnabled, 'focus', selectedTag.duration, '番茄完成', `${selectedTag.name} 完成了，回到下一步吧。`);
   },
   startBreak: () => {
     const { shortBreak, longBreak, cycleCount, pomodoroCycle, selectedTag } = get();
@@ -372,11 +387,13 @@ export const useStore = create<Store>((set, get) => ({
       remaining: duration,
       startTime,
     });
+    void armTimerNotification(get().notificationsEnabled, session, duration, session === "longBreak" ? "长休息结束" : "短休息结束", '可以回到下一轮专注了。');
   },
   complete: () => {
     const { selectedTag, startTime, history, cycleCount, session, activeDuration, tasks } = get();
     if (session !== 'focus') {
       clearActiveTimer();
+      void disarmTimerNotification();
       set({ state: 'completed', remaining: 0, startTime: null });
       return;
     }
@@ -406,6 +423,7 @@ export const useStore = create<Store>((set, get) => ({
     saveJSON('fp-cycle-count', nextCycleCount);
     if (boundTask) saveJSON('fp-tasks', nextTasks);
     clearActiveTimer();
+    void disarmTimerNotification();
     set({ state: 'completed', session: 'focus', remaining: 0, history: h, harvestedTomatoes: tomatoes, cycleCount: nextCycleCount, startTime: null, tasks: nextTasks });
 
     // Check for achievements
@@ -430,14 +448,17 @@ export const useStore = create<Store>((set, get) => ({
       const tomatoes = mergeHarvestedTomatoes(h, get().harvestedTomatoes);
       saveJSON('fp-harvested-tomatoes', tomatoes);
       clearActiveTimer();
+      void disarmTimerNotification();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false, history: h, harvestedTomatoes: tomatoes });
     } else {
       clearActiveTimer();
+      void disarmTimerNotification();
       set({ state: 'idle', session: 'focus', activeDuration: selectedTag.duration, remaining: selectedTag.duration, startTime: null, focusMode: false });
     }
   },
   reset: () => {
     clearActiveTimer();
+    void disarmTimerNotification();
     set({ state: 'idle', session: 'focus', activeDuration: get().selectedTag.duration, remaining: get().selectedTag.duration, startTime: null, focusMode: false });
   },
   tick: () => {
@@ -456,6 +477,14 @@ export const useStore = create<Store>((set, get) => ({
   setNotificationsEnabled: (v) => {
     saveJSON('fp-notifications-enabled', v);
     set({ notificationsEnabled: v });
+    if (!v) {
+      void disarmTimerNotification();
+      return;
+    }
+    const { state, session, remaining } = get();
+    if (state === 'running' && remaining > 0) {
+      void armTimerNotification(true, session, remaining, session === 'focus' ? '番茄完成' : session === 'longBreak' ? '长休息结束' : '短休息结束', '可以回到下一轮专注了。');
+    }
   },
 
   history: savedHistory,

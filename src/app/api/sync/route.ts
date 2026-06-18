@@ -58,9 +58,9 @@ function apiError(err: unknown) {
   return NextResponse.json({ error: status === 401 ? "Not signed in" : "Sync failed" }, { status: Number.isFinite(status) ? status : 500 });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     const { rows } = await getPool().query(
       "SELECT data, client_updated_at, extract(epoch from updated_at) * 1000 AS server_updated_at FROM focuspomo_sync_snapshots WHERE user_id = $1",
       [user.id]
@@ -88,7 +88,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     const body = (await req.json()) as SyncPayload;
     if (!body || typeof body !== "object" || body.data === undefined || typeof body.data !== "object" || body.data === null || Array.isArray(body.data)) {
       return NextResponse.json({ error: "Missing sync data" }, { status: 400 });

@@ -15,7 +15,7 @@ function appUrl(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     await ensureSchema();
     const { rows } = await getPool().query(
       `SELECT id, label, created_at, last_used_at
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     await ensureSchema();
     const body = await req.json().catch(() => ({})) as { label?: unknown };
     const key = `fp_${crypto.randomBytes(32).toString("base64url")}`;

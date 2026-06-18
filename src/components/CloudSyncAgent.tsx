@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { apiUrl, applySnapshot, hasUsefulLocalSnapshot, jsonFetch, LOCAL_PERSIST_EVENT, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
+import { applySnapshot, hasUsefulLocalSnapshot, jsonFetch, LOCAL_PERSIST_EVENT, localClientUpdatedAt, readSnapshot, snapshotSignature, type Snapshot } from "@/lib/cloudSync";
 
 type CloudSnapshotResponse = {
   snapshot: {
@@ -69,7 +69,7 @@ export default function CloudSyncAgent() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const refreshAuthState = async () => {
       try {
         const signedIn = await hasSignedInUser();
         signedInRef.current = signedIn;
@@ -121,8 +121,21 @@ export default function CloudSyncAgent() {
         hydrated.current = true;
         emit("offline");
       }
-    })();
-    return () => { alive = false; };
+    };
+
+    void refreshAuthState();
+
+    const onAuth = (event: Event) => {
+      const auth = (event as CustomEvent<{ auth?: string }>).detail?.auth;
+      if (!auth || auth === "connected" || auth === "calendar_connected" || auth === "signed_out") {
+        void refreshAuthState();
+      }
+    };
+    window.addEventListener("focuspomo:auth", onAuth);
+    return () => {
+      alive = false;
+      window.removeEventListener("focuspomo:auth", onAuth);
+    };
   }, []);
 
   useEffect(() => {
@@ -184,10 +197,8 @@ export default function CloudSyncAgent() {
     lastCalendarSignature.current = signature;
 
     const timer = window.setTimeout(() => {
-      fetch(apiUrl("/api/calendar/sync"), {
+      jsonFetch("/api/calendar/sync", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ records: completed }),
       }).catch(() => {});
     }, 1200);

@@ -4,6 +4,10 @@ import { Pool, type PoolClient } from "pg";
 
 const COOKIE_NAME = "fp_session";
 const SESSION_DAYS = 90;
+const APP_SESSION_TOKEN_PREFIX = "fpapp_";
+const NATIVE_AUTH_EXCHANGE_TTL_MINUTES = 15;
+
+export type NativeAuthFlow = "signin" | "calendar";
 
 function cookieDomain() {
   return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz9.me" : undefined);
@@ -28,6 +32,25 @@ function clearCookieOptions() {
     expires: new Date(0),
     maxAge: 0,
   };
+}
+
+function bearerToken(req?: Request) {
+  if (!req) return "";
+  const raw = req.headers.get("authorization") || "";
+  const [scheme, token] = raw.split(/\s+/, 2);
+  return scheme?.toLowerCase() === "bearer" ? token || "" : "";
+}
+
+function appSessionIdFromToken(token: string) {
+  return token.startsWith(APP_SESSION_TOKEN_PREFIX) ? token.slice(APP_SESSION_TOKEN_PREFIX.length) : "";
+}
+
+async function sessionIdFromRequest(req?: Request) {
+  const appSessionId = appSessionIdFromToken(bearerToken(req));
+  if (appSessionId) return appSessionId;
+  const jar = await cookies();
+  const cookieSessionId = jar.get(COOKIE_NAME)?.value || "";
+  return cookieSessionId;
 }
 
 let pool: Pool | null = null;
@@ -102,6 +125,15 @@ export async function ensureSchema() {
           last_used_at timestamptz
         )
       `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS focuspomo_native_auth_exchanges (
+          nonce text PRIMARY KEY,
+          session_id text NOT NULL REFERENCES focuspomo_sessions(id) ON DELETE CASCADE,
+          flow text NOT NULL DEFAULT 'signin',
+          expires_at timestamptz NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
     })();
   }
   return migrationsReady;
@@ -125,22 +157,64 @@ export async function createSession(userId: string) {
   );
   const jar = await cookies();
   jar.set(COOKIE_NAME, id, sessionCookieOptions(expiresAt));
+  return id;
 }
 
-export async function clearSession() {
+export async function storeNativeAuthExchange(nonce: string, sessionId: string, flow: NativeAuthFlow) {
+  await ensureSchema();
+  const expiresAt = new Date(Date.now() + NATIVE_AUTH_EXCHANGE_TTL_MINUTES * 60 * 1000);
+  await getPool().query(
+    `INSERT INTO focuspomo_native_auth_exchanges (nonce, session_id, flow, expires_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (nonce) DO UPDATE SET
+       session_id = EXCLUDED.session_id,
+       flow = EXCLUDED.flow,
+       expires_at = EXCLUDED.expires_at`,
+    [nonce, sessionId, flow, expiresAt]
+  );
+}
+
+export async function consumeNativeAuthExchange(nonce: string) {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `DELETE FROM focuspomo_native_auth_exchanges e
+      WHERE e.nonce = $1
+        AND e.expires_at > now()
+        AND EXISTS (
+          SELECT 1
+            FROM focuspomo_sessions s
+           WHERE s.id = e.session_id
+             AND s.expires_at > now()
+        )
+     RETURNING e.session_id, e.flow`,
+    [nonce]
+  );
+  if (!rows[0]) return null;
+  return {
+    sessionId: rows[0].session_id as string,
+    flow: rows[0].flow as NativeAuthFlow,
+  };
+}
+
+export async function clearSession(req?: Request) {
   const jar = await cookies();
-  const sessionId = jar.get(COOKIE_NAME)?.value;
-  if (sessionId) {
+  const sessionIds = new Set<string>();
+  const cookieSessionId = jar.get(COOKIE_NAME)?.value;
+  if (cookieSessionId) sessionIds.add(cookieSessionId);
+  const bearerSessionId = appSessionIdFromToken(bearerToken(req));
+  if (bearerSessionId) sessionIds.add(bearerSessionId);
+  if (sessionIds.size > 0) {
     await ensureSchema();
-    await getPool().query("DELETE FROM focuspomo_sessions WHERE id = $1", [sessionId]);
+    for (const sessionId of sessionIds) {
+      await getPool().query("DELETE FROM focuspomo_sessions WHERE id = $1", [sessionId]);
+    }
   }
   jar.set(COOKIE_NAME, "", clearCookieOptions());
 }
 
-export async function getSessionUser(client?: PoolClient): Promise<SessionUser | null> {
+export async function getSessionUser(req?: Request, client?: PoolClient): Promise<SessionUser | null> {
   await ensureSchema();
-  const jar = await cookies();
-  const sessionId = jar.get(COOKIE_NAME)?.value;
+  const sessionId = await sessionIdFromRequest(req);
   if (!sessionId) return null;
   const db = client || getPool();
   const { rows } = await db.query(
@@ -160,8 +234,8 @@ export async function getSessionUser(client?: PoolClient): Promise<SessionUser |
   };
 }
 
-export async function requireSessionUser() {
-  const user = await getSessionUser();
+export async function requireSessionUser(req?: Request) {
+  const user = await getSessionUser(req);
   if (!user) {
     const err = new Error("Not signed in");
     (err as Error & { status?: number }).status = 401;

@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import CloudSyncPanel from "@/components/CloudSyncPanel";
 import AgentConnectPanel from "@/components/AgentConnectPanel";
-import { isNativeApp, notificationPermission, requestNotificationPermission, vibrationSupported } from "@/lib/nativeBridge";
+import { isNativeApp, notificationPermission, openAppSettings, requestNotificationPermission, vibrationSupported } from "@/lib/nativeBridge";
 
 function IOSToggle({ value, onToggle, color = "#34C759" }: { value: boolean; onToggle: () => void; color?: string }) {
   return (
@@ -160,6 +160,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void refreshNotificationStatus();
+    const onFocus = () => { void refreshNotificationStatus(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   return (
@@ -252,7 +259,11 @@ export default function SettingsPage() {
         <Row
           title="系统通知"
           subtitle={notificationSupported ? (notificationStatus === "denied" ? "通知已被拒绝，请在系统设置里重新允许。" : isNativeApp() ? "App 内会用系统通知提醒番茄和休息结束。" : "完成番茄或休息结束时发本机通知。iPad 需安装到主屏幕后使用。") : "当前环境不支持通知。"}
-          right={notificationSupported ? <IOSToggle value={store.notificationsEnabled && notificationStatus === "granted"} onToggle={toggleNotifications} color="#E8644E" /> : undefined}
+          right={notificationSupported ? (
+            notificationStatus === "denied" && isNativeApp()
+              ? <button type="button" className="pressable" onClick={() => void openAppSettings()} style={{ fontSize: 12, fontWeight: 850, color: "var(--accent)" }}>去设置</button>
+              : <IOSToggle value={store.notificationsEnabled && notificationStatus === "granted"} onToggle={toggleNotifications} color="#E8644E" />
+          ) : undefined}
         />
         {hasVibration && (
           <Row
