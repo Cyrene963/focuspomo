@@ -5,7 +5,8 @@ import AppShell from "@/components/AppShell";
 import CloudSyncAgent from "@/components/CloudSyncAgent";
 import AchievementCelebration from "@/components/AchievementCelebration";
 import { useStore } from "@/lib/store";
-import { APP_SESSION_TOKEN_KEY, APP_SCHEME_ORIGIN, isNativeApp } from "@/lib/cloudSync";
+import { APP_SESSION_TOKEN_KEY, APP_SCHEME_ORIGIN, clearNativeAuthPending, isNativeApp, readNativeAuthPending } from "@/lib/cloudSync";
+import { jsonFetch } from "@/lib/cloudSync";
 
 export default function ClientApp() {
   const state = useStore(s => s.state);
@@ -32,6 +33,31 @@ export default function ClientApp() {
     if (!isNativeApp()) return;
     let disposed = false;
     let listener: { remove(): Promise<void> } | null = null;
+    let stateListener: { remove(): Promise<void> } | null = null;
+    const closeBrowser = async () => {
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.close();
+      } catch {}
+    };
+    const syncNativeSession = async (nonce?: string) => {
+      const pending = readNativeAuthPending();
+      const effectiveNonce = nonce || pending?.nonce || "";
+      if (!effectiveNonce) return;
+      try {
+        const res = await jsonFetch<{ token?: string; ok?: boolean }>("/api/auth/native/exchange", {
+          method: "POST",
+          body: JSON.stringify({ nonce: effectiveNonce }),
+        });
+        if (res.token) {
+          window.localStorage.setItem(APP_SESSION_TOKEN_KEY, res.token);
+          clearNativeAuthPending();
+          await closeBrowser();
+          window.document.documentElement.setAttribute("data-focuspomo-auth", "connected");
+          window.dispatchEvent(new CustomEvent("focuspomo:auth", { detail: { auth: pending?.flow === "calendar" ? "calendar_connected" : "connected" } }));
+        }
+      } catch {}
+    };
     const handleAuthUrl = async (url: string) => {
       if (!url.startsWith(`${APP_SCHEME_ORIGIN}auth`)) return;
       const parsed = new URL(url.replace(APP_SCHEME_ORIGIN, "https://focuspomo.local/"));
@@ -41,21 +67,17 @@ export default function ClientApp() {
         const token = auth.slice("token:".length).split(":")[0] || "";
         if (token) {
           window.localStorage.setItem(APP_SESSION_TOKEN_KEY, token);
-          try {
-            const { Browser } = await import("@capacitor/browser");
-            await Browser.close();
-          } catch {}
+          await closeBrowser();
           window.document.documentElement.setAttribute("data-focuspomo-auth", "connected");
           window.dispatchEvent(new CustomEvent("focuspomo:auth", { detail: { auth: "connected" } }));
         }
+        await syncNativeSession(parsed.searchParams.get("nonce") || undefined);
         return;
       }
       if (auth === "connected" || auth === "calendar_connected") {
-        try {
-          const { Browser } = await import("@capacitor/browser");
-          await Browser.close();
-        } catch {}
+        await closeBrowser();
       }
+      await syncNativeSession(parsed.searchParams.get("nonce") || undefined);
       const next = new URL(window.location.href);
       next.searchParams.set("auth", auth);
       window.history.replaceState({}, "", `${next.pathname}?${next.searchParams.toString()}${next.hash}`);
@@ -67,19 +89,30 @@ export default function ClientApp() {
       listener = await App.addListener("appUrlOpen", ({ url }) => {
         void handleAuthUrl(url);
       });
+      stateListener = await App.addListener("appStateChange", ({ isActive }) => {
+        if (!isActive) return;
+        const pending = readNativeAuthPending();
+        if (pending?.nonce) void syncNativeSession(pending.nonce);
+      });
       if (disposed) {
         void listener.remove();
+        void stateListener?.remove();
         return;
       }
       try {
         const launch = await App.getLaunchUrl();
         if (launch?.url) await handleAuthUrl(launch.url);
+        else {
+          const pending = readNativeAuthPending();
+          if (pending?.nonce) await syncNativeSession(pending.nonce);
+        }
       } catch {}
     });
 
     return () => {
       disposed = true;
       if (listener) void listener.remove();
+      if (stateListener) void stateListener.remove();
     };
   }, []);
 

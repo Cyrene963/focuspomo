@@ -69,7 +69,7 @@ export default function CloudSyncAgent() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const refreshAuthState = async () => {
       try {
         const signedIn = await hasSignedInUser();
         signedInRef.current = signedIn;
@@ -121,8 +121,21 @@ export default function CloudSyncAgent() {
         hydrated.current = true;
         emit("offline");
       }
-    })();
-    return () => { alive = false; };
+    };
+
+    void refreshAuthState();
+
+    const onAuth = (event: Event) => {
+      const auth = (event as CustomEvent<{ auth?: string }>).detail?.auth;
+      if (!auth || auth === "connected" || auth === "calendar_connected" || auth === "signed_out") {
+        void refreshAuthState();
+      }
+    };
+    window.addEventListener("focuspomo:auth", onAuth);
+    return () => {
+      alive = false;
+      window.removeEventListener("focuspomo:auth", onAuth);
+    };
   }, []);
 
   useEffect(() => {

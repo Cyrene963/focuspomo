@@ -5,6 +5,9 @@ import { Pool, type PoolClient } from "pg";
 const COOKIE_NAME = "fp_session";
 const SESSION_DAYS = 90;
 const APP_SESSION_TOKEN_PREFIX = "fpapp_";
+const NATIVE_AUTH_EXCHANGE_TTL_MINUTES = 15;
+
+export type NativeAuthFlow = "signin" | "calendar";
 
 function cookieDomain() {
   return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz9.me" : undefined);
@@ -43,10 +46,11 @@ function appSessionIdFromToken(token: string) {
 }
 
 async function sessionIdFromRequest(req?: Request) {
+  const appSessionId = appSessionIdFromToken(bearerToken(req));
+  if (appSessionId) return appSessionId;
   const jar = await cookies();
   const cookieSessionId = jar.get(COOKIE_NAME)?.value || "";
-  if (cookieSessionId) return cookieSessionId;
-  return appSessionIdFromToken(bearerToken(req));
+  return cookieSessionId;
 }
 
 let pool: Pool | null = null;
@@ -121,6 +125,15 @@ export async function ensureSchema() {
           last_used_at timestamptz
         )
       `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS focuspomo_native_auth_exchanges (
+          nonce text PRIMARY KEY,
+          session_id text NOT NULL REFERENCES focuspomo_sessions(id) ON DELETE CASCADE,
+          flow text NOT NULL DEFAULT 'signin',
+          expires_at timestamptz NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
     })();
   }
   return migrationsReady;
@@ -145,6 +158,42 @@ export async function createSession(userId: string) {
   const jar = await cookies();
   jar.set(COOKIE_NAME, id, sessionCookieOptions(expiresAt));
   return id;
+}
+
+export async function storeNativeAuthExchange(nonce: string, sessionId: string, flow: NativeAuthFlow) {
+  await ensureSchema();
+  const expiresAt = new Date(Date.now() + NATIVE_AUTH_EXCHANGE_TTL_MINUTES * 60 * 1000);
+  await getPool().query(
+    `INSERT INTO focuspomo_native_auth_exchanges (nonce, session_id, flow, expires_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (nonce) DO UPDATE SET
+       session_id = EXCLUDED.session_id,
+       flow = EXCLUDED.flow,
+       expires_at = EXCLUDED.expires_at`,
+    [nonce, sessionId, flow, expiresAt]
+  );
+}
+
+export async function consumeNativeAuthExchange(nonce: string) {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `DELETE FROM focuspomo_native_auth_exchanges e
+      WHERE e.nonce = $1
+        AND e.expires_at > now()
+        AND EXISTS (
+          SELECT 1
+            FROM focuspomo_sessions s
+           WHERE s.id = e.session_id
+             AND s.expires_at > now()
+        )
+     RETURNING e.session_id, e.flow`,
+    [nonce]
+  );
+  if (!rows[0]) return null;
+  return {
+    sessionId: rows[0].session_id as string,
+    flow: rows[0].flow as NativeAuthFlow,
+  };
 }
 
 export async function clearSession(req?: Request) {

@@ -1,7 +1,9 @@
 import crypto from "crypto";
 import { redirect } from "next/navigation";
-import { createSession, ensureSchema, getSessionUser } from "@/lib/server/db";
+import { createSession, ensureSchema, getSessionUser, storeNativeAuthExchange } from "@/lib/server/db";
 import { enableCalendarSync, decodeOAuthState, googleClient, upsertGoogleUser } from "@/lib/server/google";
+
+const APP_SCHEME_ORIGIN = "focuspomo://";
 
 function webAppOrigin() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
@@ -11,15 +13,20 @@ function isNativeAppReturn(returnTo?: string) {
   return Boolean(returnTo && returnTo.startsWith("focuspomo://"));
 }
 
-function nativeAuthRedirect(returnTo: string | undefined, auth: string): never {
-  const target = new URL("/native-auth", webAppOrigin());
-  target.searchParams.set("auth", auth);
-  if (returnTo) {
-    try {
-      const nonce = new URL(returnTo).searchParams.get("nonce");
-      if (nonce) target.searchParams.set("nonce", nonce);
-    } catch {}
+function nativeAuthNonce(returnTo?: string) {
+  if (!returnTo || !isNativeAppReturn(returnTo)) return "";
+  try {
+    return new URL(returnTo).searchParams.get("nonce") || "";
+  } catch {
+    return "";
   }
+}
+
+function nativeAuthRedirect(returnTo: string | undefined, auth: string): never {
+  const target = new URL(`${APP_SCHEME_ORIGIN}auth`);
+  target.searchParams.set("auth", auth);
+  const nonce = nativeAuthNonce(returnTo);
+  if (nonce) target.searchParams.set("nonce", nonce);
   redirect(target.toString());
 }
 
@@ -54,13 +61,17 @@ export async function completeGoogleCallback(req: Request) {
   if (isCalendarConsent) {
     if (!currentUser || currentUser.id !== userId) go(oauthState.returnTo, "calendar_account_mismatch");
     await enableCalendarSync(userId);
-    go(oauthState.returnTo, "calendar_connected");
   }
 
   const sessionId = await createSession(userId);
+  const nonce = nativeAuthNonce(oauthState.returnTo);
+  if (nonce) {
+    await storeNativeAuthExchange(nonce, sessionId, isCalendarConsent ? "calendar" : "signin");
+  }
+
   if (isNativeAppReturn(oauthState.returnTo)) {
     const appToken = `fpapp_${sessionId}`;
     go(oauthState.returnTo, `token:${appToken}`);
   }
-  go(oauthState.returnTo, "connected");
+  go(oauthState.returnTo, isCalendarConsent ? "calendar_connected" : "connected");
 }

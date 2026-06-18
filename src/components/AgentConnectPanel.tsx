@@ -35,11 +35,16 @@ function useSignedInUser() {
   useEffect(() => {
     refresh();
     const onAuth = () => refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
     window.addEventListener("focuspomo:auth", onAuth);
     window.addEventListener("focus", onAuth);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("focuspomo:auth", onAuth);
       window.removeEventListener("focus", onAuth);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [refresh]);
   return user;

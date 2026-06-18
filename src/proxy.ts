@@ -14,8 +14,31 @@ const NO_STORE_PATHS = [
 ];
 
 export function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const origin = request.headers.get("origin") || "";
+  const allowedOrigin = /^(capacitor:\/\/localhost|ionic:\/\/localhost|https?:\/\/localhost(?::\d+)?)$/i.test(origin)
+    ? origin
+    : "";
+
+  if (pathname.startsWith("/api/") && request.method === "OPTIONS" && allowedOrigin) {
+    const response = new NextResponse(null, { status: 204 });
+    response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response.headers.set("Vary", "Origin");
+    return response;
+  }
+
   const response = NextResponse.next();
-  if (NO_STORE_PATHS.some((rx) => rx.test(request.nextUrl.pathname))) {
+  if (pathname.startsWith("/api/") && allowedOrigin) {
+    response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response.headers.set("Vary", "Origin");
+  }
+  if (NO_STORE_PATHS.some((rx) => rx.test(pathname))) {
     response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
     response.headers.set("CDN-Cache-Control", "no-store");
     response.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
@@ -28,6 +51,7 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/api/:path*",
     "/favicon.ico",
     "/apple-touch-icon.png",
     "/manifest.json",

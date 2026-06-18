@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APP_SESSION_TOKEN_KEY, clearNativeAuthPending, APP_SCHEME_ORIGIN } from "@/lib/cloudSync";
+import { APP_SESSION_TOKEN_KEY, APP_SCHEME_ORIGIN, clearNativeAuthPending } from "@/lib/cloudSync";
 
 function buildAppUrl(auth: string, nonce?: string) {
   const url = new URL(`${APP_SCHEME_ORIGIN}auth`);
@@ -30,7 +30,7 @@ export default function NativeAuthPage() {
       setMessage("已登录，正在返回 App");
     } else {
       clearNativeAuthPending();
-      setMessage("已完成授权");
+      setMessage("授权已完成");
     }
 
     const appUrl = buildAppUrl(auth, nonce || undefined);

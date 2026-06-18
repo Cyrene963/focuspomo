@@ -53,11 +53,16 @@ export default function CloudSyncPanel() {
       }
       refreshUser();
     };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshUser();
+    };
     window.addEventListener("focuspomo:auth", onAuth);
     window.addEventListener("focus", refreshUser);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("focuspomo:auth", onAuth);
       window.removeEventListener("focus", refreshUser);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [refreshUser]);
 
@@ -77,6 +82,7 @@ export default function CloudSyncPanel() {
     try {
       await jsonFetch("/api/auth/logout", { method: "POST", body: "{}" });
       if (typeof window !== "undefined") window.localStorage.removeItem(APP_SESSION_TOKEN_KEY);
+      window.dispatchEvent(new CustomEvent("focuspomo:auth", { detail: { auth: "signed_out" } }));
       setState({ user: null, loading: false, busy: false, message: "已退出登录", calendarEnabled: false });
     } catch {
       setState(s => ({ ...s, busy: false, message: "退出失败" }));
