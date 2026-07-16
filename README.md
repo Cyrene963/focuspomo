@@ -70,7 +70,7 @@ Security model:
       "command": "node",
       "args": ["/path/to/focuspomo/scripts/focuspomo-mcp.mjs"],
       "env": {
-        "FOCUSPOMO_ENDPOINT": "https://focuspomo.bz9.me/api/agent/tasks",
+        "FOCUSPOMO_ENDPOINT": "https://focuspomo.bz8.me/api/agent/tasks",
         "FOCUSPOMO_AGENT_KEY": "YOUR_F...KEY"
       }
     }

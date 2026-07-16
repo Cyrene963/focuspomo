@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     images: { unoptimized: true },
     trailingSlash: true,
   } : {}),
-  allowedDevOrigins: ["focuspomo.bz9.me", "pomofocus.bz9.me"],
+  allowedDevOrigins: ["focuspomo.bz8.me", "pomofocus.bz8.me"],
   // Next 16 can infer /root as the workspace because this VPS also has a
   // top-level package-lock.json. Pin the app root so local/CI builds validate
   // this PWA, not an accidental parent workspace.

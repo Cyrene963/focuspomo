@@ -23,7 +23,7 @@ export const CLIENT_UPDATED_AT_KEY = "fp-client-updated-at";
 export const LOCAL_PERSIST_EVENT = "focuspomo:local-persist";
 export const APP_SESSION_TOKEN_KEY = "fp-app-session-token";
 export const NATIVE_AUTH_PENDING_KEY = "fp-native-auth-pending";
-export const CLOUD_ORIGIN = "https://focuspomo.bz9.me";
+export const CLOUD_ORIGIN = "https://focuspomo.bz8.me";
 export const APP_SCHEME_ORIGIN = "focuspomo://";
 
 export type NativeAuthFlow = "signin" | "calendar";

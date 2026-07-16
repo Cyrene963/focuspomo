@@ -28,7 +28,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3457/
 
 ```bash
 python3 scripts/disaster_recovery_audit.py
-curl -s -L -o /dev/null -w '%{http_code}\n' https://pomofocus.bz9.me
+curl -s -L -o /dev/null -w '%{http_code}\n' https://pomofocus.bz8.me
 ```
 
 ## Notes

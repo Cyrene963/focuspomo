@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const endpoint = process.env.FOCUSPOMO_ENDPOINT || 'https://focuspomo.bz9.me/api/agent/tasks';
+const endpoint = process.env.FOCUSPOMO_ENDPOINT || 'https://focuspomo.bz8.me/api/agent/tasks';
 const token = process.env.FOCUSPOMO_AGENT_KEY || process.env.FOCUSPOMO_AGENT_TOKEN || '';
 
 const tools = [

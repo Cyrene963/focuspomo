@@ -6,7 +6,7 @@ import { enableCalendarSync, decodeOAuthState, googleClient, upsertGoogleUser } 
 const APP_SCHEME_ORIGIN = "focuspomo://";
 
 function webAppOrigin() {
-  return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
+  return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz8.me";
 }
 
 function isNativeAppReturn(returnTo?: string) {
@@ -33,7 +33,7 @@ function nativeAuthRedirect(returnTo: string | undefined, auth: string): never {
 function go(returnTo: string | undefined, auth: string): never {
   if (isNativeAppReturn(returnTo)) nativeAuthRedirect(returnTo, auth);
   const target = new URL(webAppOrigin());
-  if (returnTo && /(^|\.)bz9\.me(?::\d+)?$/.test(returnTo)) {
+  if (returnTo && /(^|\.)bz8\.me(?::\d+)?$/.test(returnTo)) {
     try {
       const parsed = new URL(returnTo.startsWith("http") ? returnTo : `https://${returnTo}`);
       target.search = parsed.search;

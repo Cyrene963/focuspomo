@@ -29,7 +29,7 @@ module.exports = {
       ...localEnv,
       NODE_ENV: 'production',
       NODE_OPTIONS: '--max-old-space-size=512',
-      NEXT_PUBLIC_APP_URL: localEnv.NEXT_PUBLIC_APP_URL || 'https://focuspomo.bz9.me',
+      NEXT_PUBLIC_APP_URL: localEnv.NEXT_PUBLIC_APP_URL || 'https://focuspomo.bz8.me',
     },
     instances: 1,
     autorestart: true,

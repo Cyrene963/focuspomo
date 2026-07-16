@@ -14,7 +14,7 @@ export const GOOGLE_CALENDAR_SCOPES = [
 ];
 
 function baseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz9.me";
+  return process.env.NEXT_PUBLIC_APP_URL || "https://focuspomo.bz8.me";
 }
 
 export function googleRedirectUri() {

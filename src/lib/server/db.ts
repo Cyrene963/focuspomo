@@ -10,7 +10,7 @@ const NATIVE_AUTH_EXCHANGE_TTL_MINUTES = 15;
 export type NativeAuthFlow = "signin" | "calendar";
 
 function cookieDomain() {
-  return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz9.me" : undefined);
+  return process.env.FOCUSPOMO_COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".bz8.me" : undefined);
 }
 
 function sessionCookieOptions(expiresAt: Date) {
